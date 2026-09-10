@@ -35,7 +35,7 @@
     }
     h1{margin:6px 0 8px;font-size:clamp(30px,4.5vw,54px);line-height:1.05;letter-spacing:-.055em;font-weight:800}
     .sub{margin:0;color:var(--muted);max-width:780px}
-    .hero{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;min-width:0;flex:1 1 620px}
+    .hero{display:block;width:100%;min-width:0;margin-top:18px}
     .stat{
       background:rgba(255,255,255,.78);backdrop-filter:blur(12px);
       border:1px solid rgba(207,224,223,.9);border-radius:18px;padding:14px 16px;box-shadow:var(--shadow);
@@ -116,7 +116,8 @@
     .swatch{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px}
     .summary{margin-top:0}
     .summary-table-wrap{overflow:auto;border:1px solid rgba(207,224,223,.95);border-radius:18px;background:rgba(255,255,255,.8)}
-    .summary-table{min-width:680px;background:transparent}
+    .summary-table-wrap h2{margin:0;padding:14px 14px 0;font-size:19px;letter-spacing:-.035em}
+    .summary-table{min-width:980px;background:transparent}
     .summary-table thead th{position:static;background:#edf4fb}
     .summary-table tbody th,.summary-table tbody td{padding:11px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:left}
     .summary-table tbody th{font-weight:700}

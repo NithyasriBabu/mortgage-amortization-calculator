@@ -2,6 +2,16 @@
       element.innerHTML = items.map(item => `<span><i class="swatch" style="background:${item.color}"></i>${escapeHtml(item.name)}</span>`).join('');
     }
 
+    function extraPaymentSummary(plan){
+      const labels = { oneTime:'One-time', monthly:'Monthly', annual:'Annual' };
+      return plan.rules.map(rule => {
+        const amount = money2.format(Number(rule.amount) || 0);
+        if(rule.type === 'oneTime') return `${labels[rule.type]}: ${amount} (${rule.date ? formatDate(parseDate(rule.date)) : '-'})`;
+        const dateRange = rule.start || rule.end ? ` (${rule.start ? formatDate(parseDate(rule.start)) : '-'} to ${rule.end ? formatDate(parseDate(rule.end)) : '-'})` : '';
+        return `${labels[rule.type] || 'Extra'}: ${amount}${dateRange}`;
+      }).join('<br>') || '-';
+    }
+
     function render(){
       const baseline = computeScenario({includeExtras:false});
       const scenarios = state.plans.map(plan => ({ plan, result: computeScenario({includeExtras:true, rules:plan.rules}) }));
@@ -12,15 +22,16 @@
         const payoff = result.rows.length ? result.rows[result.rows.length - 1].date : parseDate(els.startDate.value);
         const saved = Math.max(0, baseline.totalInterest - result.totalInterest);
         const savedMonths = Math.max(0, baseline.rows.length - result.rows.length);
-        return { name:plan.name, payoff, interest:result.totalInterest, saved, savedMonths, savedYears:(savedMonths / 12).toFixed(1) };
-      });
+        return { plan, name:plan.name, payoff, interest:result.totalInterest, saved, savedMonths, savedYears:(savedMonths / 12).toFixed(1) };
+      }).sort((a, b) => a.payoff - b.payoff);
       const firstRow = baseline.rows[0];
       els.breakdownPayment.textContent = money2.format(baseline.payment);
       els.breakdownInterest.textContent = money2.format(firstRow?.interest || 0);
       els.breakdownPrincipal.textContent = money2.format(firstRow?.principal || 0);
       els.breakdownTotalInterest.textContent = money.format(baseline.totalInterest);
 
-      els.summary.innerHTML = `<div class="summary-table-wrap"><table class="summary-table"><thead><tr><th>Plan</th><th>Payoff date</th><th>Time saved</th><th>Interest paid</th><th>Money saved</th></tr></thead><tbody><tr><th scope="row">Baseline</th><td>${formatDate(basePayoff)}</td><td>-</td><td>${money.format(baseline.totalInterest)}</td><td>-</td></tr>${planLines.map(line => `<tr><th scope="row">${escapeHtml(line.name)}</th><td>${formatDate(line.payoff)}</td><td>${line.savedMonths} mo / ${line.savedYears} yr</td><td>${money.format(line.interest)}</td><td>${money.format(line.saved)}</td></tr>`).join('')}</tbody></table></div>`;
+      const comparisonRows = [{ name:'Baseline', plan:null, payoff:basePayoff, timeSaved:'-', interest:baseline.totalInterest, moneySaved:'-' }, ...planLines.map(line => ({ name:line.name, plan:line.plan, payoff:line.payoff, timeSaved:`${line.savedMonths} mo / ${line.savedYears} yr`, interest:line.interest, moneySaved:line.saved }))].sort((a, b) => a.payoff - b.payoff);
+      els.summary.innerHTML = `<div class="summary-table-wrap"><h2>Comparison snapshot</h2><table class="summary-table"><thead><tr><th>Plan</th><th>Extra-payment rules</th><th>Payoff date</th><th>Time saved</th><th>Interest paid</th><th>Money saved</th></tr></thead><tbody>${comparisonRows.map(row => `<tr><th scope="row">${escapeHtml(row.name)}</th><td>${row.plan ? extraPaymentSummary(row.plan) : 'None'}</td><td>${formatDate(row.payoff)}</td><td>${row.timeSaved}</td><td>${money.format(row.interest)}</td><td>${row.moneySaved === '-' ? '-' : money.format(row.moneySaved)}</td></tr>`).join('')}</tbody></table></div>`;
 
       drawChart(els.balanceChart, [
         { x: baseline.rows.map((_, i) => i + 1), y: baseline.rows.map(r => r.endingBalance), color: '#5FACD3' },
@@ -155,6 +166,7 @@
       els.deletePlan.title = onlyPlan ? 'The last plan cannot be deleted' : 'Delete active plan';
       els.planTabs.querySelectorAll('.plan-tab').forEach(tab => tab.addEventListener('click', () => {
         state.activePlanId = tab.dataset.planId;
+        state.schedulePlanId = tab.dataset.planId;
         refreshRules();
       }));
       els.rules.innerHTML = activePlan().rules.map((rule, idx) => {
@@ -234,6 +246,7 @@
       const plan = { id:crypto.randomUUID(), name:name.trim(), color:availablePlanColor(), rules:[] };
       state.plans.push(plan);
       state.activePlanId = plan.id;
+      state.schedulePlanId = plan.id;
       refreshRules();
     }
 
@@ -246,6 +259,7 @@
       copy.rules = copy.rules.map(rule => ({ ...rule, id: crypto.randomUUID() }));
       state.plans.splice(state.plans.indexOf(source) + 1, 0, copy);
       state.activePlanId = copy.id;
+      state.schedulePlanId = copy.id;
       refreshRules();
     }
 
@@ -263,6 +277,7 @@
       const index = state.plans.indexOf(plan);
       state.plans = state.plans.filter(item => item.id !== plan.id);
       state.activePlanId = state.plans[Math.min(index, state.plans.length - 1)].id;
+      if(!state.plans.some(item => item.id === state.schedulePlanId)) state.schedulePlanId = state.activePlanId;
       refreshRules();
     }
 
@@ -396,8 +411,10 @@
     function reportRulesMarkup(plan){
       const labels = { oneTime:'One-time extra', monthly:'Monthly extra', annual:'Annual extra' };
       const date = value => value ? formatDate(parseDate(value)) : '-';
-      const rows = plan.rules.map(rule => `<tr><td>${labels[rule.type] || 'Extra payment'}</td><td>${money2.format(Number(rule.amount) || 0)}</td><td>${date(rule.type === 'oneTime' ? rule.date : rule.start)}</td><td>${rule.type === 'oneTime' ? '-' : date(rule.end)}</td></tr>`).join('');
-      return `<table class="report-rules-table"><thead><tr><th>Type</th><th>Amount</th><th>Start/date</th><th>End date</th></tr></thead><tbody>${rows}</tbody></table>`;
+      return plan.rules.map(rule => {
+        const dateText = rule.type === 'oneTime' ? `Date: ${date(rule.date)}` : (rule.start || rule.end ? `Dates: ${date(rule.start)} to ${date(rule.end)}` : '');
+        return `<p class="report-line"><span>${labels[rule.type] || 'Extra payment'}:</span> <strong>${money2.format(Number(rule.amount) || 0)}</strong>${dateText ? ` <span>${dateText}</span>` : ''}</p>`;
+      }).join('') || '<p class="report-line">None</p>';
     }
 
     function reportChartsMarkup(plan, baseline, result){
@@ -431,7 +448,19 @@
       const saved = Math.max(0, baseline.totalInterest - result.totalInterest);
       const savedMonths = Math.max(0, baseline.rows.length - result.rows.length);
       const baselinePayoff = baseline.rows.length ? baseline.rows[baseline.rows.length - 1].date : parseDate(els.startDate.value);
-      return `<table class="report-comparison-table"><thead><tr><th>Plan</th><th>Payoff date</th><th>Time saved</th><th>Interest paid</th><th>Money saved</th></tr></thead><tbody><tr><th scope="row">Baseline</th><td>${formatDate(baselinePayoff)}</td><td>-</td><td>${money.format(baseline.totalInterest)}</td><td>-</td></tr><tr><th scope="row">${escapeHtml(plan.name)}</th><td>${formatDate(payoff)}</td><td>${savedMonths} mo / ${(savedMonths / 12).toFixed(1)} yr</td><td>${money.format(result.totalInterest)}</td><td>${money.format(saved)}</td></tr></tbody></table>`;
+      return `<div class="report-plan-comparison-lines"><p class="report-line"><span>Payoff date:</span> <strong>Baseline ${formatDate(baselinePayoff)}; ${escapeHtml(plan.name)} ${formatDate(payoff)}</strong></p><p class="report-line"><span>Time saved:</span> <strong>${savedMonths} mo / ${(savedMonths / 12).toFixed(1)} yr</strong></p><p class="report-line"><span>Interest paid:</span> <strong>Baseline ${money.format(baseline.totalInterest)}; ${escapeHtml(plan.name)} ${money.format(result.totalInterest)}</strong></p><p class="report-line"><span>Money saved:</span> <strong>${money.format(saved)}</strong></p></div>`;
+    }
+
+    function reportComparisonSnapshot(baseline){
+      const baselinePayoff = baseline.rows.length ? baseline.rows[baseline.rows.length - 1].date : parseDate(els.startDate.value);
+      const rows = [{name:'Baseline', payoff:baselinePayoff, markup:`<tr><th scope="row">Baseline</th><td>None</td><td>${formatDate(baselinePayoff)}</td><td>-</td><td>${money.format(baseline.totalInterest)}</td><td>-</td></tr>`}, ...state.plans.map(plan => {
+        const result = computeScenario({includeExtras:true, rules:plan.rules});
+        const payoff = result.rows.length ? result.rows[result.rows.length - 1].date : parseDate(els.startDate.value);
+        const savedMonths = Math.max(0, baseline.rows.length - result.rows.length);
+        const saved = Math.max(0, baseline.totalInterest - result.totalInterest);
+        return { plan, payoff, markup:`<tr><th scope="row">${escapeHtml(plan.name)}</th><td>${extraPaymentSummary(plan)}</td><td>${formatDate(payoff)}</td><td>${savedMonths} mo / ${(savedMonths / 12).toFixed(1)} yr</td><td>${money.format(result.totalInterest)}</td><td>${money.format(saved)}</td></tr>` };
+      })].sort((a, b) => a.payoff - b.payoff).map(row => row.markup).join('');
+      return `<section class="report-section report-snapshot"><h2>Comparison snapshot</h2><table class="report-comparison-table"><thead><tr><th>Plan</th><th>Extra-payment rules</th><th>Payoff date</th><th>Time saved</th><th>Interest paid</th><th>Money saved</th></tr></thead><tbody>${rows}</tbody></table></section>`;
     }
 
     function exportReport(options){
@@ -445,6 +474,7 @@
         ['Payment day', inputValue('paymentDay')]
       ].map(([label, value]) => `<p class="report-line"><span>${label}:</span> <strong>${value}</strong></p>`).join('');
       const baseline = computeScenario({includeExtras:false});
+      const snapshot = reportComparisonSnapshot(baseline);
       const planReports = state.plans.map(plan => {
         const result = computeScenario({includeExtras:true, rules:plan.rules});
         return `<article class="report-plan"><header class="report-plan-header"><h2>${escapeHtml(plan.name)}</h2></header>
@@ -457,6 +487,7 @@
       const reportBody = `<main class="pdf-report">
         <header class="report-header"><div><p class="report-kicker">Mortgage planning report</p><h1>Amortization summary</h1><p>Baseline mortgage compared with each extra-payment plan.</p></div><div class="report-date">Prepared ${formatDate(new Date())}</div></header>
         ${options.overview ? `<section class="report-section report-overview"><h2>Loan overview</h2><div class="report-fields">${loanOverview}</div></section>` : ''}
+        ${options.comparison ? snapshot : ''}
         ${planReports}
       </main>`;
       const reportStyles = `
@@ -487,6 +518,7 @@
         .report-comparison-table th,.report-comparison-table td{text-align:left;padding:6px 8px 6px 0;border-bottom:1px solid #d1d5db;white-space:nowrap}
         .report-comparison-table thead th{font-weight:700;border-bottom:1px solid #111827}
         .report-comparison-table tbody th{font-weight:700}
+        .report-snapshot .report-comparison-table{font-size:9px}
         .report-top-left{min-width:0}
         .report-rules .report-value{display:inline;padding:0;border:0;border-radius:0;background:transparent;font-size:12px}
         .report-rules .rule-head{display:none}
