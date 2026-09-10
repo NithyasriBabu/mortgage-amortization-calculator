@@ -75,3 +75,6 @@
       if(rule.type === 'annual'){
         if(!start || paymentDate < start || paymentDate > (end || loanEnd)) return 0;
         return paymentDate.getMonth() === start.getMonth() ? amount : 0;
+      }
+      return 0;
+    }

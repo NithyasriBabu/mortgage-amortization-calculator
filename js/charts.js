@@ -1,7 +1,3 @@
-      }
-      return 0;
-    }
-
     function drawChart(svg, series, opts){
       const width = 1000, height = 320;
       const pad = {l:88,r:24,t:18,b:46};
@@ -46,3 +42,6 @@
       svg.innerHTML = `
         <rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="transparent"></rect>
         ${lines.join('')}
+        ${paths}
+      `;
+    }

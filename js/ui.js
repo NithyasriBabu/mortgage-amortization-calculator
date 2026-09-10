@@ -1,7 +1,3 @@
-        ${paths}
-      `;
-    }
-
     function renderLegend(element, items){
       element.innerHTML = items.map(item => `<span><i class="swatch" style="background:${item.color}"></i>${escapeHtml(item.name)}</span>`).join('');
     }
