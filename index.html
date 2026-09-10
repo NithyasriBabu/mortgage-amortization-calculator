@@ -16,21 +16,8 @@
         <div class="kicker">Mortgage amortization calculator</div>
         <h1>See how extra payments change the payoff.</h1>
         <p class="sub">Compare a baseline mortgage against editable extra-payment rules, then review the payoff date, saved interest, charts, and a month-by-month schedule.</p>
-        <button class="btn export-btn" id="exportReport">Export report</button>
       </div>
-      <div class="hero" id="summary"></div>
     </header>
-
-    <details class="card calculation-card" id="calculationSection" open>
-      <summary>How the payment is calculated</summary>
-      <div class="calculation-grid">
-        <div class="calculation-block">
-          <h3>General baseline method</h3>
-          <div class="formula">Monthly rate = annual rate / 12<br>Payment = P x r x (1 + r)^n / ((1 + r)^n - 1)<br>Interest = beginning balance x monthly rate<br>Principal = payment - interest<br>Ending balance = beginning balance - principal</div>
-          <p class="small">The monthly rate is derived from the annual rate entered above. The dollar amount of interest changes each payment as the remaining balance decreases. Extra payments are then applied directly to principal.</p>
-        </div>
-      </div>
-    </details>
 
     <section class="topgrid">
       <div class="left-stack">
@@ -67,16 +54,32 @@
           </div>
       </div>
 
-      <div class="card panel">
-        <h2>Extra payment rules</h2>
+      <div class="hero" id="summary"></div>
+
+      <div class="card panel" id="rulesPanel">
+        <div class="section-heading-row">
+          <h2>Extra payment rules</h2>
+          <div class="plan-header-actions">
+            <div class="rule-actions">
+              <button class="btn ghost mini icon-btn" id="addPlan" aria-label="Add payment plan" title="Add payment plan"><span aria-hidden="true">+</span><span class="sr-only">Add payment plan</span></button>
+              <button class="btn ghost mini icon-btn" id="renamePlan" aria-label="Rename active plan" title="Rename active plan"><span aria-hidden="true">&#9998;</span><span class="sr-only">Rename active plan</span></button>
+              <button class="btn ghost mini icon-btn" id="duplicatePlan" aria-label="Duplicate active plan" title="Duplicate active plan"><span class="duplicate-icon" aria-hidden="true"></span><span class="sr-only">Duplicate active plan</span></button>
+              <button class="btn secondary mini icon-btn" id="deletePlan" aria-label="Delete active plan" title="Delete active plan"><span aria-hidden="true">&times;</span><span class="sr-only">Delete active plan</span></button>
+            </div>
+            <details class="plan-color-picker" id="planColorPicker">
+              <summary class="plan-color-swatch" id="planColorSwatch" aria-label="Choose color for active plan" title="Choose plan color"></summary>
+              <span class="plan-color-options" id="planColorOptions">
+                <button type="button" class="color-option" data-plan-color="#ECA400" aria-label="Amber Honey" title="Amber Honey"></button>
+                <button type="button" class="color-option" data-plan-color="#F95738" aria-label="Tomato" title="Tomato"></button>
+                <button type="button" class="color-option" data-plan-color="#5E3A73" aria-label="Velvet Purple" title="Velvet Purple"></button>
+                <button type="button" class="color-option" data-plan-color="#52796F" aria-label="Deep Teal" title="Deep Teal"></button>
+                <button type="button" class="color-option" data-plan-color="#9A031E" aria-label="Deep Crimson" title="Deep Crimson"></button>
+              </span>
+            </details>
+          </div>
+        </div>
         <div class="plan-toolbar">
           <div class="plan-tabs" id="planTabs" role="tablist" aria-label="Payment plans"></div>
-          <div class="rule-actions">
-            <button class="btn ghost mini icon-btn" id="addPlan" aria-label="Add payment plan" title="Add payment plan"><span aria-hidden="true">+</span><span class="sr-only">Add payment plan</span></button>
-            <button class="btn ghost mini icon-btn" id="renamePlan" aria-label="Rename active plan" title="Rename active plan"><span aria-hidden="true">&#9998;</span><span class="sr-only">Rename active plan</span></button>
-            <button class="btn ghost mini icon-btn" id="duplicatePlan" aria-label="Duplicate active plan" title="Duplicate active plan"><span class="duplicate-icon" aria-hidden="true"></span><span class="sr-only">Duplicate active plan</span></button>
-            <button class="btn secondary mini icon-btn" id="deletePlan" aria-label="Delete active plan" title="Delete active plan"><span aria-hidden="true">&times;</span><span class="sr-only">Delete active plan</span></button>
-          </div>
         </div>
         <div class="row rule-actions-row">
           <button class="btn" id="addRule">Add rule</button>
@@ -102,18 +105,52 @@
         <div class="chart-head">
           <div>
             <h2>Cumulative paid</h2>
-            <p>Principal and interest over time, extra-payment scenario</p>
+            <p>Principal and interest for the active plan</p>
           </div>
         </div>
         <svg id="cumChart" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Cumulative principal and interest chart"></svg>
         <div class="legend" id="cumLegend"></div>
       </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div>
+            <h2>Principal payments</h2>
+            <p>Principal paid over time across all plans</p>
+          </div>
+        </div>
+        <svg id="principalChart" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Principal payments chart"></svg>
+        <div class="legend" id="principalLegend"></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div>
+            <h2>Interest payments</h2>
+            <p>Interest paid over time across all plans</p>
+          </div>
+        </div>
+        <svg id="interestChart" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Interest payments chart"></svg>
+        <div class="legend" id="interestLegend"></div>
+      </div>
     </section>
       </div>
     </section>
 
+    <details class="card calculation-card" id="calculationSection">
+      <summary>How the payment is calculated</summary>
+      <div class="calculation-grid">
+        <div class="calculation-block">
+          <h3>General baseline method</h3>
+          <div class="formula">Monthly rate = annual rate / 12<br>Payment = P x r x (1 + r)^n / ((1 + r)^n - 1)<br>Interest = beginning balance x monthly rate<br>Principal = payment - interest<br>Ending balance = beginning balance - principal</div>
+          <p class="small">The monthly rate is derived from the annual rate entered above. The dollar amount of interest changes each payment as the remaining balance decreases. Extra payments are then applied directly to principal.</p>
+        </div>
+      </div>
+    </details>
+
     <section class="card panel schedule-section">
-      <div class="schedule-heading"><h2>Amortization schedule</h2><div class="schedule-toggle" role="group" aria-label="Schedule year visibility"><button type="button" id="expandAllYears">Expand all</button><button type="button" id="collapseAllYears" class="active">Collapse all</button></div></div>
+      <div class="schedule-heading">
+        <div class="schedule-heading-top"><h2>Amortization schedule</h2><button class="btn export-btn" id="exportReport">Export report</button></div>
+        <div class="schedule-heading-bottom"><div class="schedule-plan-tabs" id="schedulePlanTabs" role="tablist" aria-label="Amortization schedules by plan"></div><div class="schedule-toggle" role="group" aria-label="Schedule year visibility"><button type="button" id="expandAllYears">Expand all</button><button type="button" id="collapseAllYears" class="active">Collapse all</button></div></div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>

@@ -7,9 +7,11 @@
       plans: [{
         id: firstPlanId,
         name: 'Plan 1',
+        color: '#5E3A73',
         rules: createDefaultRules()
       }],
       activePlanId: firstPlanId,
+      schedulePlanId: firstPlanId,
       scheduleExpanded: false
     };
 
@@ -21,6 +23,7 @@
       paymentDay: document.getElementById('paymentDay'),
       rules: document.getElementById('rules'),
       planTabs: document.getElementById('planTabs'),
+      rulesPanel: document.getElementById('rulesPanel'),
       addPlan: document.getElementById('addPlan'),
       renamePlan: document.getElementById('renamePlan'),
       duplicatePlan: document.getElementById('duplicatePlan'),
@@ -30,10 +33,18 @@
       exportReport: document.getElementById('exportReport'),
       summary: document.getElementById('summary'),
       scheduleBody: document.getElementById('scheduleBody'),
+      schedulePlanTabs: document.getElementById('schedulePlanTabs'),
       balanceChart: document.getElementById('balanceChart'),
       cumChart: document.getElementById('cumChart'),
+      principalChart: document.getElementById('principalChart'),
+      interestChart: document.getElementById('interestChart'),
       balanceLegend: document.getElementById('balanceLegend'),
       cumLegend: document.getElementById('cumLegend'),
+      principalLegend: document.getElementById('principalLegend'),
+      interestLegend: document.getElementById('interestLegend'),
+      planColorSwatch: document.getElementById('planColorSwatch'),
+      planColorPicker: document.getElementById('planColorPicker'),
+      planColorOptions: document.getElementById('planColorOptions'),
       breakdownPayment: document.getElementById('breakdownPayment'),
       breakdownInterest: document.getElementById('breakdownInterest'),
       breakdownPrincipal: document.getElementById('breakdownPrincipal'),
@@ -50,9 +61,7 @@
     const money2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 0 });
     const dtf = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const planColors = ['#525ea7','#5facd3','#97dde9','#3f8fa5','#ffc349'];
-    const principalColors = ['#525ea7','#3f8fa5','#5facd3','#287f8c','#ffc349'];
-    const interestColors = ['#5facd3','#7081bd','#3f8fa5','#97dde9','#ffc349'];
+    const planColors = ['#ECA400','#F95738','#5E3A73','#52796F','#9A031E'];
     function parseDate(v){
       if(!v) return null;
       const d = new Date(v + 'T00:00:00');
@@ -61,6 +70,15 @@
     function formatDate(d){ return dtf.format(d); }
     function escapeHtml(value){
       return String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+    }
+    function availablePlanColor(){
+      const used = new Set(state.plans.map(plan => plan.color).filter(Boolean));
+      return planColors.find(color => !used.has(color)) || planColors[0];
+    }
+    function lightenColor(hex, amount=.45){
+      const value = hex.replace('#','');
+      const channels = [0,2,4].map(index => parseInt(value.slice(index,index + 2), 16));
+      return `rgb(${channels.map(channel => Math.round(channel + (255 - channel) * amount)).join(', ')})`;
     }
     function toInputDate(d){
       const z = new Date(d.getTime() - d.getTimezoneOffset()*60000);
@@ -129,4 +147,3 @@
       });
       return [...groups.entries()];
     }
-

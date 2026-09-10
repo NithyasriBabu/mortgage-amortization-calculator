@@ -20,27 +20,37 @@
       els.breakdownPrincipal.textContent = money2.format(firstRow?.principal || 0);
       els.breakdownTotalInterest.textContent = money.format(baseline.totalInterest);
 
-      els.summary.innerHTML = [
-        `<div class="metric compare"><span>Payoff date</span><div class="compare-line"><span>Baseline</span><span>${formatDate(basePayoff)}</span></div>${planLines.map(line => `<div class="compare-line"><span>${escapeHtml(line.name)}</span><span>${formatDate(line.payoff)}</span></div>`).join('')}</div>`,
-        `<div class="metric compare"><span>Total interest paid</span><div class="compare-line"><span>Baseline</span><span>${money.format(baseline.totalInterest)}</span></div>${planLines.map(line => `<div class="compare-line"><span>${escapeHtml(line.name)}</span><span>${money.format(line.interest)}</span></div>`).join('')}</div>`,
-        `<div class="metric compare"><span>Saved vs baseline</span>${planLines.map(line => `<div class="compare-line"><span>${escapeHtml(line.name)}</span><span>${line.savedMonths} mo / ${line.savedYears} yr · ${money.format(line.saved)}</span></div>`).join('')}</div>`
-      ].join('');
+      els.summary.innerHTML = `<div class="summary-table-wrap"><table class="summary-table"><thead><tr><th>Plan</th><th>Payoff date</th><th>Time saved</th><th>Interest paid</th><th>Money saved</th></tr></thead><tbody><tr><th scope="row">Baseline</th><td>${formatDate(basePayoff)}</td><td>-</td><td>${money.format(baseline.totalInterest)}</td><td>-</td></tr>${planLines.map(line => `<tr><th scope="row">${escapeHtml(line.name)}</th><td>${formatDate(line.payoff)}</td><td>${line.savedMonths} mo / ${line.savedYears} yr</td><td>${money.format(line.interest)}</td><td>${money.format(line.saved)}</td></tr>`).join('')}</tbody></table></div>`;
 
       drawChart(els.balanceChart, [
-        { x: baseline.rows.map((_, i) => i + 1), y: baseline.rows.map(r => r.endingBalance), color: '#525ea7' },
-        ...scenarios.map(({result}, i) => ({ x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.endingBalance), color:planColors[i % planColors.length] }))
+        { x: baseline.rows.map((_, i) => i + 1), y: baseline.rows.map(r => r.endingBalance), color: '#5FACD3' },
+        ...scenarios.map(({plan,result}) => ({ x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.endingBalance), color:plan.color }))
       ], { formatY: v => money.format(v), formatAxisY: v => compactMoney.format(v), xLabel: 'Months from start', yLabel: 'Remaining balance ($)' });
 
+      const activeColor = activePlan().color;
       drawChart(els.cumChart, [
-        ...scenarios.flatMap(({plan,result}, i) => [
-          { x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.cumulativePrincipal), color:principalColors[i % principalColors.length] },
-          { x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.cumulativeInterest), color:interestColors[i % interestColors.length] }
-        ])
+        { x:extra.rows.map((_, n) => n + 1), y:extra.rows.map(r => r.cumulativePrincipal), color:activeColor },
+        { x:extra.rows.map((_, n) => n + 1), y:extra.rows.map(r => r.cumulativeInterest), color:lightenColor(activeColor) }
       ], { formatY: v => money.format(v), formatAxisY: v => compactMoney.format(v), xLabel: 'Months from start', yLabel: 'Cumulative amount ($)' });
-      renderLegend(els.balanceLegend, [{name:'Baseline',color:'#525ea7'}, ...scenarios.map(({plan}, i) => ({name:plan.name,color:planColors[i % planColors.length]}))]);
-      renderLegend(els.cumLegend, scenarios.flatMap(({plan}, i) => [{name:`${plan.name} principal`,color:principalColors[i % principalColors.length]},{name:`${plan.name} interest`,color:interestColors[i % interestColors.length]}]));
 
-      const yearGroups = groupRowsByYear(extra.rows);
+      const principalSeries = scenarios.map(({plan,result}) => ({ x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.principal), color:plan.color }));
+      const interestSeries = scenarios.map(({plan,result}) => ({ x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.interest), color:lightenColor(plan.color) }));
+      drawChart(els.principalChart, principalSeries, { formatY: v => money.format(v), formatAxisY: v => compactMoney.format(v), xLabel: 'Months from start', yLabel: 'Principal payment ($)' });
+      drawChart(els.interestChart, interestSeries, { formatY: v => money.format(v), formatAxisY: v => compactMoney.format(v), xLabel: 'Months from start', yLabel: 'Interest payment ($)' });
+      renderLegend(els.balanceLegend, [{name:'Baseline',color:'#5FACD3'}, ...scenarios.map(({plan}) => ({name:plan.name,color:plan.color}))]);
+      renderLegend(els.cumLegend, [{name:`${activePlan().name} principal`,color:activeColor},{name:`${activePlan().name} interest`,color:lightenColor(activeColor)}]);
+      renderLegend(els.principalLegend, scenarios.map(({plan}) => ({name:plan.name,color:plan.color})));
+      renderLegend(els.interestLegend, scenarios.map(({plan}) => ({name:plan.name,color:lightenColor(plan.color)})));
+
+      const schedulePlan = state.plans.find(plan => plan.id === state.schedulePlanId) || state.plans[0];
+      state.schedulePlanId = schedulePlan.id;
+      const scheduleResult = computeScenario({includeExtras:true, rules:schedulePlan.rules});
+      els.schedulePlanTabs.innerHTML = state.plans.map(plan => `<button type="button" class="plan-tab${plan.id === schedulePlan.id ? ' active' : ''}" style="--plan-color:${plan.color};--plan-color-soft:${lightenColor(plan.color, .86)}" data-schedule-plan-id="${plan.id}" role="tab" aria-selected="${plan.id === schedulePlan.id}">${escapeHtml(plan.name)}</button>`).join('');
+      els.schedulePlanTabs.querySelectorAll('[data-schedule-plan-id]').forEach(tab => tab.addEventListener('click', () => {
+        state.schedulePlanId = tab.dataset.schedulePlanId;
+        render();
+      }));
+      const yearGroups = groupRowsByYear(scheduleResult.rows);
       els.scheduleBody.innerHTML = yearGroups.map(([year, rows]) => {
         const yearInterest = rows.reduce((sum, row) => sum + row.interest, 0);
         const yearScheduled = rows.reduce((sum, row) => sum + row.scheduledPayment, 0);
@@ -75,7 +85,7 @@
       els.scheduleBody.querySelectorAll('[data-year-detail]').forEach(button => button.addEventListener('click', () => showYearCalculation(Number(button.dataset.yearDetail))));
       els.expandAllYears.classList.toggle('active', state.scheduleExpanded);
       els.collapseAllYears.classList.toggle('active', !state.scheduleExpanded);
-      if(!extra.rows.length){
+      if(!scheduleResult.rows.length){
         els.scheduleBody.innerHTML = '<tr><td colspan="10" class="empty">No amortization rows to show.</td></tr>';
       }
     }
@@ -122,7 +132,19 @@
     }
 
     function renderRules(){
-      els.planTabs.innerHTML = state.plans.map(plan => `<button class="plan-tab${plan.id === state.activePlanId ? ' active' : ''}" data-plan-id="${plan.id}" role="tab" aria-selected="${plan.id === state.activePlanId}">${escapeHtml(plan.name)}</button>`).join('');
+      const plan = activePlan();
+      plan.color ||= availablePlanColor();
+      els.rulesPanel.style.setProperty('--plan-color', plan.color);
+      els.rulesPanel.style.setProperty('--plan-color-soft', lightenColor(plan.color, .86));
+      els.planTabs.innerHTML = state.plans.map(plan => `<button class="plan-tab${plan.id === state.activePlanId ? ' active' : ''}" style="--plan-color:${plan.color};--plan-color-soft:${lightenColor(plan.color, .86)}" data-plan-id="${plan.id}" role="tab" aria-selected="${plan.id === state.activePlanId}">${escapeHtml(plan.name)}</button>`).join('');
+      els.planColorSwatch.style.setProperty('--plan-color', plan.color);
+      els.planColorOptions.querySelectorAll('.color-option').forEach(option => {
+        const selected = option.dataset.planColor === plan.color;
+        const taken = state.plans.some(item => item.id !== plan.id && item.color === option.dataset.planColor);
+        option.hidden = taken;
+        option.disabled = false;
+        option.setAttribute('aria-pressed', String(selected));
+      });
       const planLimitReached = state.plans.length >= 5;
       const onlyPlan = state.plans.length <= 1;
       els.addPlan.disabled = planLimitReached;
@@ -209,7 +231,7 @@
       const suggestedName = `Plan ${state.plans.length + 1}`;
       const name = window.prompt('Name this payment plan', suggestedName);
       if(!name || !name.trim()) return;
-      const plan = { id:crypto.randomUUID(), name:name.trim(), rules:[] };
+      const plan = { id:crypto.randomUUID(), name:name.trim(), color:availablePlanColor(), rules:[] };
       state.plans.push(plan);
       state.activePlanId = plan.id;
       refreshRules();
@@ -220,6 +242,7 @@
       const copy = structuredClone(source);
       copy.id = crypto.randomUUID();
       copy.name = `${source.name} copy`;
+      copy.color = availablePlanColor();
       copy.rules = copy.rules.map(rule => ({ ...rule, id: crypto.randomUUID() }));
       state.plans.splice(state.plans.indexOf(source) + 1, 0, copy);
       state.activePlanId = copy.id;
@@ -281,6 +304,17 @@
     els.termYears.addEventListener('input', render);
     els.startDate.addEventListener('change', render);
     els.paymentDay.addEventListener('input', render);
+    els.planColorOptions.addEventListener('click', event => {
+      const option = event.target.closest('.color-option');
+      if(!option || option.disabled) return;
+      activePlan().color = option.dataset.planColor;
+      els.planColorPicker.open = false;
+      renderRules();
+      render();
+    });
+    document.addEventListener('click', event => {
+      if(!event.target.closest('.plan-color-picker')) els.planColorPicker.open = false;
+    });
     els.closePaymentInfo.addEventListener('click', () => { els.paymentInfoModal.hidden = true; });
     els.paymentInfoModal.addEventListener('click', event => { if(event.target === els.paymentInfoModal) els.paymentInfoModal.hidden = true; });
     function setAllYearsExpanded(expand){
@@ -332,31 +366,76 @@
       document.getElementById('exportModal').hidden = true;
     }
 
+    function reportScheduleMarkup(plan, detail){
+      const result = computeScenario({includeExtras:true, rules:plan.rules});
+      const headers = '<tr><th>Period</th><th>Date</th><th>Scheduled payment</th><th>Extra payment</th><th>Interest</th><th>Principal</th><th>Ending balance</th><th>Cumulative interest</th><th>Cumulative principal</th></tr>';
+      if(detail === 'yearly'){
+        const rows = groupRowsByYear(result.rows).map(([year, yearRows]) => {
+          const scheduled = yearRows.reduce((sum, row) => sum + row.scheduledPayment, 0);
+          const extra = yearRows.reduce((sum, row) => sum + row.extraPayment, 0);
+          const interest = yearRows.reduce((sum, row) => sum + row.interest, 0);
+          const principal = yearRows.reduce((sum, row) => sum + row.principal, 0);
+          const last = yearRows[yearRows.length - 1];
+          return `<tr><td>${year}</td><td>${formatDate(yearRows[0].date)} - ${formatDate(last.date)}</td><td>${money2.format(scheduled)}</td><td>${money2.format(extra)}</td><td>${money2.format(interest)}</td><td>${money2.format(principal)}</td><td>${money2.format(last.endingBalance)}</td><td>${money2.format(last.cumulativeInterest)}</td><td>${money2.format(last.cumulativePrincipal)}</td></tr>`;
+        }).join('');
+        return `<div class="report-plan-schedule"><h3>${escapeHtml(plan.name)}</h3><table>${headers}<tbody>${rows}</tbody></table></div>`;
+      }
+      const rows = groupRowsByYear(result.rows).map(([year, yearRows]) => {
+        const scheduled = yearRows.reduce((sum, row) => sum + row.scheduledPayment, 0);
+        const extra = yearRows.reduce((sum, row) => sum + row.extraPayment, 0);
+        const interest = yearRows.reduce((sum, row) => sum + row.interest, 0);
+        const principal = yearRows.reduce((sum, row) => sum + row.principal, 0);
+        const last = yearRows[yearRows.length - 1];
+        const yearRow = `<tr class="year-row"><td>${year}</td><td>${formatDate(yearRows[0].date)} - ${formatDate(last.date)}</td><td>${money2.format(scheduled)}</td><td>${money2.format(extra)}</td><td>${money2.format(interest)}</td><td>${money2.format(principal)}</td><td>${money2.format(last.endingBalance)}</td><td>${money2.format(last.cumulativeInterest)}</td><td>${money2.format(last.cumulativePrincipal)}</td></tr>`;
+        const monthRows = yearRows.map(row => `<tr><td>Month ${row.month}</td><td>${formatDate(row.date)}</td><td>${money2.format(row.scheduledPayment)}</td><td>${money2.format(row.extraPayment)}</td><td>${money2.format(row.interest)}</td><td>${money2.format(row.principal)}</td><td>${money2.format(row.endingBalance)}</td><td>${money2.format(row.cumulativeInterest)}</td><td>${money2.format(row.cumulativePrincipal)}</td></tr>`).join('');
+        return yearRow + monthRows;
+      }).join('');
+      return `<div class="report-plan-schedule"><h3>${escapeHtml(plan.name)}</h3><table>${headers}<tbody>${rows}</tbody></table></div>`;
+    }
+
+    function reportRulesMarkup(plan){
+      const labels = { oneTime:'One-time extra', monthly:'Monthly extra', annual:'Annual extra' };
+      const date = value => value ? formatDate(parseDate(value)) : '-';
+      const rows = plan.rules.map(rule => `<tr><td>${labels[rule.type] || 'Extra payment'}</td><td>${money2.format(Number(rule.amount) || 0)}</td><td>${date(rule.type === 'oneTime' ? rule.date : rule.start)}</td><td>${rule.type === 'oneTime' ? '-' : date(rule.end)}</td></tr>`).join('');
+      return `<table class="report-rules-table"><thead><tr><th>Type</th><th>Amount</th><th>Start/date</th><th>End date</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function reportChartsMarkup(plan, baseline, result){
+      const svgMarkup = (series, opts) => {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 1000 320');
+        svg.setAttribute('preserveAspectRatio', 'none');
+        drawChart(svg, series, opts);
+        return svg.outerHTML;
+      };
+      const legendMarkup = items => items.map(item => `<span><i class="swatch" style="background:${item.color}"></i>${escapeHtml(item.name)}</span>`).join('');
+      const series = rows => rows.map((_, index) => index + 1);
+      const chart = (title, subtitle, svg, legend) => `<div class="chart-card"><div class="chart-head"><div><h2>${title}</h2><p>${subtitle}</p></div></div>${svg}<div class="legend">${legend}</div></div>`;
+      const color = plan.color;
+      return `<div class="report-chart-grid">
+        ${chart('Remaining balance', 'Baseline vs this plan', svgMarkup([
+          {x:series(baseline.rows), y:baseline.rows.map(row => row.endingBalance), color:'#5FACD3'},
+          {x:series(result.rows), y:result.rows.map(row => row.endingBalance), color}
+        ], {formatY:v => money.format(v), formatAxisY:v => compactMoney.format(v), xLabel:'Months from start', yLabel:'Remaining balance ($)'}), legendMarkup([{name:'Baseline',color:'#5FACD3'},{name:plan.name,color}]))}
+        ${chart('Cumulative paid', 'Principal and interest for this plan', svgMarkup([
+          {x:series(result.rows), y:result.rows.map(row => row.cumulativePrincipal), color},
+          {x:series(result.rows), y:result.rows.map(row => row.cumulativeInterest), color:lightenColor(color)}
+        ], {formatY:v => money.format(v), formatAxisY:v => compactMoney.format(v), xLabel:'Months from start', yLabel:'Cumulative amount ($)'}), legendMarkup([{name:`${plan.name} principal`,color},{name:`${plan.name} interest`,color:lightenColor(color)}]))}
+        ${chart('Principal payments', 'Principal paid by this plan', svgMarkup([{x:series(result.rows), y:result.rows.map(row => row.principal), color}], {formatY:v => money.format(v), formatAxisY:v => compactMoney.format(v), xLabel:'Months from start', yLabel:'Principal payment ($)'}), legendMarkup([{name:plan.name,color}]))}
+        ${chart('Interest payments', 'Interest paid by this plan', svgMarkup([{x:series(result.rows), y:result.rows.map(row => row.interest), color:lightenColor(color)}], {formatY:v => money.format(v), formatAxisY:v => compactMoney.format(v), xLabel:'Months from start', yLabel:'Interest payment ($)'}), legendMarkup([{name:plan.name,color:lightenColor(color)}]))}
+      </div>`;
+    }
+
+    function reportPlanComparison(plan, baseline, result){
+      const payoff = result.rows.length ? result.rows[result.rows.length - 1].date : parseDate(els.startDate.value);
+      const saved = Math.max(0, baseline.totalInterest - result.totalInterest);
+      const savedMonths = Math.max(0, baseline.rows.length - result.rows.length);
+      const baselinePayoff = baseline.rows.length ? baseline.rows[baseline.rows.length - 1].date : parseDate(els.startDate.value);
+      return `<table class="report-comparison-table"><thead><tr><th>Plan</th><th>Payoff date</th><th>Time saved</th><th>Interest paid</th><th>Money saved</th></tr></thead><tbody><tr><th scope="row">Baseline</th><td>${formatDate(baselinePayoff)}</td><td>-</td><td>${money.format(baseline.totalInterest)}</td><td>-</td></tr><tr><th scope="row">${escapeHtml(plan.name)}</th><td>${formatDate(payoff)}</td><td>${savedMonths} mo / ${(savedMonths / 12).toFixed(1)} yr</td><td>${money.format(result.totalInterest)}</td><td>${money.format(saved)}</td></tr></tbody></table>`;
+    }
+
     function exportReport(options){
       const reportWindow = window.open('', '_blank');
-      const summary = document.querySelector('#summary').innerHTML;
-      const charts = [...document.querySelectorAll('.chart-card')].map(card => card.cloneNode(true));
-      const rules = document.querySelector('#rules').cloneNode(true);
-      const scheduleTable = document.querySelector('.table-wrap table').cloneNode(true);
-      rules.querySelectorAll('.rule-actions').forEach(node => node.remove());
-      scheduleTable.querySelectorAll('.info-button').forEach(node => node.remove());
-      rules.querySelectorAll('input, select, textarea').forEach(control => {
-        if(control.type === 'date' && !control.value){
-          control.closest('.field')?.remove();
-          return;
-        }
-        const value = control.tagName === 'SELECT' ? (control.selectedOptions[0]?.textContent || 'Not provided') : (control.value || 'Not provided');
-        const valueNode = document.createElement('span');
-        valueNode.className = 'report-value';
-        valueNode.textContent = value;
-        control.replaceWith(valueNode);
-      });
-      scheduleTable.querySelectorAll('.year-toggle').forEach(toggle => {
-        const label = document.createElement('span');
-        label.className = 'report-year-label';
-        label.textContent = toggle.querySelector('span').textContent.replace(/^[▾▸]\s*/, '');
-        toggle.replaceWith(label);
-      });
       const inputValue = id => document.getElementById(id).value || 'Not provided';
       const loanOverview = [
         ['Loan amount', money2.format(Number(inputValue('loanAmount')) || 0)],
@@ -364,29 +443,21 @@
         ['Loan term', `${inputValue('termYears')} years`],
         ['Start date', formatDate(parseDate(inputValue('startDate')) || new Date())],
         ['Payment day', inputValue('paymentDay')]
-      ].map(([label, value]) => `<div class="report-field"><span>${label}</span><strong>${value}</strong></div>`).join('');
-      let scheduleMarkup = scheduleTable.outerHTML;
-      if(options.scheduleDetail === 'monthly'){
-        scheduleTable.querySelectorAll('.month-row').forEach(row => row.classList.remove('is-hidden'));
-        scheduleMarkup = scheduleTable.outerHTML;
-      } else {
-        const scenarioRows = computeScenario({includeExtras:true}).rows;
-        const annualRows = groupRowsByYear(scenarioRows);
-        scheduleMarkup = `<table><thead><tr><th>Year</th><th>Payments</th><th>Scheduled payments</th><th>Extra payments</th><th>Interest</th><th>Principal</th><th>Total paid</th><th>Ending balance</th></tr></thead><tbody>${annualRows.map(([year, rows]) => {
-          const scheduled = rows.reduce((sum, row) => sum + row.scheduledPayment, 0);
-          const extra = rows.reduce((sum, row) => sum + row.extraPayment, 0);
-          const interest = rows.reduce((sum, row) => sum + row.interest, 0);
-          const principal = rows.reduce((sum, row) => sum + row.principal, 0);
-          return `<tr><td>${year}</td><td>${rows.length}</td><td>${money2.format(scheduled)}</td><td>${money2.format(extra)}</td><td>${money2.format(interest)}</td><td>${money2.format(principal)}</td><td>${money2.format(scheduled + extra)}</td><td>${money2.format(rows[rows.length - 1].endingBalance)}</td></tr>`;
-        }).join('')}</tbody></table>`;
-      }
+      ].map(([label, value]) => `<p class="report-line"><span>${label}:</span> <strong>${value}</strong></p>`).join('');
+      const baseline = computeScenario({includeExtras:false});
+      const planReports = state.plans.map(plan => {
+        const result = computeScenario({includeExtras:true, rules:plan.rules});
+        return `<article class="report-plan"><header class="report-plan-header"><h2>${escapeHtml(plan.name)}</h2></header>
+          ${options.rules ? `<section class="report-section report-rules"><h3>Extra-payment rules</h3>${reportRulesMarkup(plan)}</section>` : ''}
+          ${options.comparison ? `<section class="report-section report-plan-comparison"><h3>Baseline vs extra payments</h3>${reportPlanComparison(plan, baseline, result)}</section>` : ''}
+          ${options.charts ? `<section class="report-section report-charts"><h3>Scenario charts</h3>${reportChartsMarkup(plan, baseline, result)}</section>` : ''}
+          ${options.schedule ? `<section class="report-section report-schedule"><h3>Amortization schedule</h3><p class="report-muted">${options.scheduleDetail === 'monthly' ? 'Monthly detail' : 'Yearly summary'} through this plan’s payoff date.</p><div class="report-table-wrap">${reportScheduleMarkup(plan, options.scheduleDetail)}</div></section>` : ''}
+        </article>`;
+      }).join('');
       const reportBody = `<main class="pdf-report">
-        <header class="report-header"><div><p class="report-kicker">Mortgage planning report</p><h1>Amortization summary</h1><p>Baseline mortgage compared with the selected extra-payment plan.</p></div><div class="report-date">Prepared ${formatDate(new Date())}</div></header>
-        ${options.overview ? `<section class="report-section"><h2>Loan overview</h2><div class="report-fields">${loanOverview}</div></section>` : ''}
-        ${options.comparison ? `<section class="report-section"><h2>Baseline vs extra payments</h2><div class="report-summary">${summary}</div></section>` : ''}
-        ${options.rules ? `<section class="report-section report-rules"><h2>Extra-payment rules</h2>${rules.outerHTML}</section>` : ''}
-        ${options.charts ? `<section class="report-section report-charts"><h2>Scenario charts</h2><div class="report-chart-grid">${charts.map(chart => chart.outerHTML).join('')}</div></section>` : ''}
-        ${options.schedule ? `<section class="report-section report-schedule"><h2>Amortization schedule</h2><p class="report-muted">${options.scheduleDetail === 'monthly' ? 'Monthly detail' : 'Yearly summary'} through the extra-payment payoff date.</p><div class="report-table-wrap">${scheduleMarkup}</div></section>` : ''}
+        <header class="report-header"><div><p class="report-kicker">Mortgage planning report</p><h1>Amortization summary</h1><p>Baseline mortgage compared with each extra-payment plan.</p></div><div class="report-date">Prepared ${formatDate(new Date())}</div></header>
+        ${options.overview ? `<section class="report-section report-overview"><h2>Loan overview</h2><div class="report-fields">${loanOverview}</div></section>` : ''}
+        ${planReports}
       </main>`;
       const reportStyles = `
         :root{--ink:#27345d;--muted:#66738f;--line:#d3e5ec;--accent:#525ea7;--accent2:#ffc349;--accent3:#5facd3;--card:#fff}
@@ -398,10 +469,42 @@
         .report-section{margin-top:26px}.report-fields{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.report-field,.report-summary .metric{border:1px solid var(--line);border-radius:12px;padding:12px;background:#eff8f7}.report-field span,.report-summary .metric>span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.report-field strong{display:block;margin-top:7px;font-size:15px}
         .report-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.report-summary .metric{min-height:100px}.report-summary .compare-line{display:flex;justify-content:space-between;gap:12px;margin-top:9px;font-size:11px}.report-summary .compare-line span:last-child{font-weight:700;text-align:right}.report-summary .delta{color:var(--accent)}
         .report-rules .rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.report-rules .rule{padding:12px;break-inside:avoid}.report-rules .rule-head{margin-bottom:8px}.report-rules .rule .inputs{gap:8px}.report-rules .report-value{display:block;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px}.report-rules .small,.report-rules .footer-note{display:none}
-        .report-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.report-charts .chart-card{padding:0;border:0;box-shadow:none}.report-charts .chart-head{margin-bottom:8px}.report-charts .chart-head h2{font-size:15px}.report-charts .chart-head p,.report-charts .legend{font-size:11px}.report-charts svg{height:auto;aspect-ratio:1000 / 320;border:1px solid var(--line)}
-        .report-muted{margin:-7px 0 12px;color:var(--muted);font-size:11px}.report-table-wrap{overflow:visible}.report-schedule table{width:100%;border-collapse:collapse;font-size:9px}.report-schedule th{background:#edf4fb;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);white-space:nowrap}.report-schedule td{padding:5px 4px;border-bottom:1px solid #e6f0f4;white-space:nowrap}.report-schedule .year-row td{padding:0;background:#eaf7fb}.report-year-label{display:block;padding:7px 4px;font-weight:700}.report-schedule .month-row.is-hidden{display:none}
-        @page{size:landscape;margin:.4in}@media print{body{background:#fff}.pdf-report{max-width:none;padding:0}.report-header,.report-section{break-inside:avoid}.report-schedule{break-before:page}.report-charts svg{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
-        @media(max-width:760px){.pdf-report{padding:20px}.report-header{display:block}.report-date{margin-top:12px}.report-fields,.report-summary,.report-rules .rules,.report-chart-grid{grid-template-columns:1fr 1fr}}
+        .report-chart-grid{display:grid;grid-template-columns:1fr;gap:22px}.report-charts .chart-card{padding:0;border:0;box-shadow:none}.report-charts .chart-head{margin-bottom:8px}.report-charts .chart-head h2{font-size:15px}.report-charts .chart-head p,.report-charts .legend{font-size:11px}.report-charts .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}.report-charts .swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;print-color-adjust:exact;-webkit-print-color-adjust:exact}.report-charts svg{height:auto;aspect-ratio:1000 / 320;border:1px solid var(--line)}
+        .report-muted{margin:-7px 0 12px;color:var(--muted);font-size:11px}.report-table-wrap{overflow:visible}.report-schedule table{width:100%;border-collapse:collapse;font-size:9px}.report-schedule th{background:#edf4fb;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);white-space:nowrap}.report-schedule td{padding:5px 4px;border-bottom:1px solid #e6f0f4;white-space:nowrap}.report-schedule .year-row td{padding:0;background:#eaf7fb}.report-year-label{display:block;padding:7px 4px;font-weight:700}.report-schedule .month-row.is-hidden{display:none}.report-plan{margin-top:34px;padding-top:20px;border-top:1px solid #111827;break-inside:auto}.report-plan-header h2{margin:0;font-size:22px}.report-plan .report-section{margin-top:18px}.report-plan h3{margin:0 0 10px;font-size:15px}.report-plan-schedule{margin-top:18px;break-inside:avoid}.report-plan-schedule h3{margin:0 0 8px;font-size:14px}
+        @page{size:portrait;margin:.45in}
+        /* Keep the report understated for printing; chart colors remain intact. */
+        .pdf-report{color:#111827;background:#fff;padding:32px}
+        .report-header{border-bottom:1px solid #111827;padding-bottom:16px}
+        .report-kicker{color:#374151;font-size:10px}
+        h1{font-size:28px;letter-spacing:-.025em}h2{font-size:17px}
+        .report-section{margin-top:22px}
+        .report-field,.report-summary .metric{border:1px solid #cbd5e1;border-radius:4px;background:#fff;padding:10px}
+        .report-field span,.report-summary .metric>span,.report-header p:not(.report-kicker),.report-date,.report-muted{color:#4b5563}
+        .report-summary .delta{color:#111827}
+        .report-rules .report-value{border-color:#cbd5e1;border-radius:4px}
+        .report-top-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:42px}
+        .report-comparison-table{width:100%;border-collapse:collapse;font-size:11px}
+        .report-comparison-table th,.report-comparison-table td{text-align:left;padding:6px 8px 6px 0;border-bottom:1px solid #d1d5db;white-space:nowrap}
+        .report-comparison-table thead th{font-weight:700;border-bottom:1px solid #111827}
+        .report-comparison-table tbody th{font-weight:700}
+        .report-top-left{min-width:0}
+        .report-rules .report-value{display:inline;padding:0;border:0;border-radius:0;background:transparent;font-size:12px}
+        .report-rules .rule-head{display:none}
+        .report-rules-table{width:100%;border-collapse:collapse;font-size:11px}
+        .report-rules-table th{text-align:left;font-weight:700;border-bottom:1px solid #111827;padding:5px 8px 5px 0}
+        .report-rules-table td{border-bottom:1px solid #d1d5db;padding:6px 8px 6px 0}
+        .report-top-grid .report-section{margin-top:22px}
+        .report-fields{display:block}
+        .report-line{margin:0 0 8px;font-size:12px}
+        .report-line span{color:#4b5563}
+        .report-line strong{font-weight:700}
+        .report-summary{display:block}
+        .report-summary .metric{min-height:0;margin:0 0 11px;padding:0 0 10px;border:0;border-bottom:1px solid #d1d5db;border-radius:0}
+        .report-summary .metric:last-child{margin-bottom:0}
+        .report-summary .metric>span{font-size:11px;font-weight:700;color:#111827;text-transform:none;letter-spacing:0}
+        .report-summary .compare-line{font-size:12px;margin-top:5px}
+        @media print{body{background:#fff}.pdf-report{max-width:none;padding:0}.report-top-grid,.report-chart-grid{grid-template-columns:1fr}.report-header,.report-section{break-inside:avoid}.report-schedule{break-before:page}.report-charts svg{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+        @media(max-width:760px){.pdf-report{padding:20px}.report-header{display:block}.report-date{margin-top:12px}.report-top-grid{display:block}.report-fields,.report-summary,.report-rules .rules,.report-chart-grid{grid-template-columns:1fr 1fr}}
       `;
       if(!reportWindow){
         const blob = new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>Mortgage amortization report</title><style>${reportStyles}</style></head><body>${reportBody}</body></html>`], {type:'text/html'});
