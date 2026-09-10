@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mortgage Amortization Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f3fbfd;
+      --bg2:#e8f6fa;
+      --card:#ffffff;
+      --ink:#27345d;
+      --muted:#66738f;
+      --line:#d3e5ec;
+      --accent:#525ea7;
+      --accent2:#ffc349;
+      --accent3:#5facd3;
+      --good:#3d8fa3;
+      --shadow:0 18px 45px rgba(82,94,167,.12);
+      --radius:20px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      font-family: "Sora", "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      font-size:14px;
+      line-height:1.5;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(151,221,233,.35), transparent 30%),
+        radial-gradient(circle at top right, rgba(255,195,73,.22), transparent 24%),
+        linear-gradient(135deg,var(--bg),var(--bg2));
+    }
+    a{color:var(--accent)}
+    .wrap{width:100%;max-width:1440px;margin:0 auto;padding:clamp(16px,3vw,28px) clamp(12px,2vw,18px) 40px}
+    header{
+      display:flex;gap:18px;justify-content:space-between;align-items:flex-end;
+      padding:10px 0 22px;flex-wrap:wrap;
+    }
+    .kicker{
+      text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:700;color:#9b7113;
+    }
+    h1{margin:6px 0 8px;font-size:clamp(30px,4.5vw,54px);line-height:1.05;letter-spacing:-.055em;font-weight:800}
+    .sub{margin:0;color:var(--muted);max-width:780px}
+    .hero{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;min-width:0;flex:1 1 620px}
+    .stat{
+      background:rgba(255,255,255,.78);backdrop-filter:blur(12px);
+      border:1px solid rgba(207,224,223,.9);border-radius:18px;padding:14px 16px;box-shadow:var(--shadow);
+    }
+    .stat span{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .stat strong{display:block;margin-top:6px;font-size:17px;font-weight:700}
+    .topgrid{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:clamp(14px,2vw,18px);align-items:start}
+    .topgrid > *,.left-stack > *,.right-stack > *{min-width:0}
+    .card{
+      background:rgba(251,255,253,.9);border:1px solid rgba(207,224,223,.95);
+      border-radius:var(--radius);box-shadow:var(--shadow);min-width:0;
+    }
+    .panel{padding:18px}
+    .panel h2{margin:0 0 14px;font-size:19px;letter-spacing:-.035em;font-weight:700}
+    .inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .field{display:flex;flex-direction:column;gap:7px;min-width:0}
+    .field.full{grid-column:1/-1}
+    label{font-size:12px;color:#334155;font-weight:600}
+    input,select,button,textarea{
+      font:inherit;font-size:14px;
+    }
+    input,select,textarea{
+      width:100%;max-width:100%;min-width:0;border:1px solid var(--line);background:#fff;border-radius:14px;
+      padding:12px 13px;color:var(--ink);outline:none;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    input:focus,select:focus,textarea:focus{border-color:rgba(82,94,167,.58);box-shadow:0 0 0 4px rgba(82,94,167,.13)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{
+      border:0;border-radius:14px;padding:11px 14px;font-size:13px;font-weight:700;cursor:pointer;
+      background:var(--accent);color:#fff;
+    }
+    .btn.secondary{background:#edf4fb;color:var(--ink);border:1px solid var(--line)}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(82,94,167,.3)}
+    .export-btn{margin-top:16px}
+    .small{font-size:12px;color:var(--muted);line-height:1.45}
+    .rules{display:grid;gap:12px}
+    .rule{
+      border:1px solid var(--line);background:#f8fdfc;border-radius:18px;padding:14px;
+    }
+    .rule-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+    .rule-title{font-weight:700}
+    .rule-actions{display:flex;gap:6px;flex-wrap:nowrap;flex-shrink:0}
+    .mini{width:38px;height:38px;padding:0;border-radius:12px;font-size:19px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+    .icon-btn{font-weight:800}
+    .icon-btn:disabled{opacity:.45;cursor:not-allowed}
+    .duplicate-icon{position:relative;width:16px;height:16px;border:2px solid currentColor;border-radius:3px;display:block;margin:2px 0 0 2px}
+    .duplicate-icon::before{content:"";position:absolute;width:12px;height:12px;border:2px solid currentColor;border-radius:3px;left:-6px;top:-6px;background:transparent}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .left-stack{display:grid;gap:18px}
+    .plan-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .plan-tabs{display:flex;flex:1 1 260px;flex-wrap:wrap;gap:6px;overflow:visible;min-width:0;padding-bottom:2px}
+    .plan-tab{border:1px solid var(--line);background:#eef8fb;color:var(--muted);border-radius:12px;padding:9px 12px;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+    .plan-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .plan-add{flex-shrink:0;white-space:nowrap}
+    .right-stack{min-width:0;overflow:hidden}
+    .charts{display:grid;grid-template-columns:1fr;gap:18px;margin-top:0}
+    .chart-card{padding:18px;min-width:0;overflow:hidden}
+    .chart-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap}
+    .chart-head h2{margin:0;font-size:19px;font-weight:700}
+    .chart-head p{margin:0;color:var(--muted);font-size:13px}
+    svg{width:100%;max-width:100%;height:auto;aspect-ratio:1000 / 320;display:block;background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(235,247,247,.5));border:1px solid rgba(207,224,223,.95);border-radius:18px}
+    .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:#334155}
+    .swatch{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px}
+    .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+    .metric{
+      background:rgba(255,255,255,.8);border:1px solid rgba(207,224,223,.95);
+      border-radius:18px;padding:14px 15px;
+    }
+    .metric span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .metric strong{display:block;margin-top:6px;font-size:17px;line-height:1.25;font-weight:700}
+    .metric.compare{min-height:108px}
+    .metric.compare .compare-line{display:flex;justify-content:space-between;gap:12px;margin-top:10px;font-size:13px}
+    .metric.compare .compare-line span:last-child{font-weight:800;text-align:right}
+    .metric.compare .delta{color:var(--good);font-weight:800}
+    .year-row td{padding:10px;border-bottom:1px solid var(--line);background:#eaf7fb;white-space:nowrap}.year-row td:first-child{padding:0}
+    .year-toggle{width:100%;border:0;background:transparent;padding:14px 12px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--ink);font-weight:700;cursor:pointer}
+    .year-toggle small{color:var(--muted);font-weight:600}
+    .month-row.is-hidden{display:none}
+    .table-wrap{margin-top:18px;overflow:auto;border-radius:18px;border:1px solid rgba(211,229,236,.95)}
+    .schedule-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.schedule-heading h2{margin-bottom:0}
+    .schedule-toggle{display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:14px;background:#edf4fb}
+    .schedule-toggle button{border:0;border-radius:10px;background:transparent;color:var(--muted);padding:8px 11px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:background .15s ease,color .15s ease,box-shadow .15s ease}
+    .schedule-toggle button:hover{color:var(--ink);background:rgba(255,255,255,.7)}
+    .schedule-toggle button.active{background:#fff;color:var(--accent);box-shadow:inset 0 0 0 1px rgba(82,94,167,.24),0 1px 2px rgba(82,94,167,.12)}
+    .schedule-toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.88);font-size:12px}
+    thead th{
+      position:sticky;top:0;background:#edf4fb;z-index:1;text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap
+    }
+    tbody td{padding:10px;border-bottom:1px solid #edf0ea;white-space:nowrap}
+    tbody tr:hover{background:#fafcf8}
+    .table-note{padding:12px 0 0;color:var(--muted);font-size:12px}
+    .empty{
+      padding:18px;border:1px dashed #cfd6cd;border-radius:16px;background:#fafbf8;color:var(--muted)
+    }
+    .footer-note{margin-top:12px;color:var(--muted);font-size:12px;line-height:1.5}
+    .input-note{margin:12px 0 0}.rule-actions-row{margin-bottom:12px}.schedule-section{margin-top:18px}.modal-heading{justify-content:space-between}.report-option--stacked{display:block}
+    .loan-breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px}.loan-breakdown-item{padding:10px 11px;border:1px solid var(--line);border-radius:12px;background:#fff8e8}.loan-breakdown-item span{display:block;color:var(--muted);font-size:11px;line-height:1.25}.loan-breakdown-item strong{display:block;margin-top:5px;font-size:15px}
+    .calculation-card{margin:18px 0;padding:20px}.calculation-card summary{cursor:pointer;font-size:18px;font-weight:800;letter-spacing:-.03em}.calculation-card summary::marker{color:var(--accent)}.calculation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.calculation-block{border:1px solid var(--line);border-radius:16px;padding:16px;background:#eef8fb}.calculation-block h3{margin:0 0 10px;font-size:16px}.formula{padding:10px 12px;border-radius:10px;background:#fff;border:1px solid var(--line);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.6}.calculation-list{display:grid;gap:7px;margin:12px 0 0}.calculation-line{display:flex;justify-content:space-between;gap:12px;font-size:13px}.calculation-line span:last-child{font-weight:800;text-align:right}.info-button{width:28px;height:28px;border:1px solid rgba(82,94,167,.3);border-radius:50%;background:#eaf7fb;color:var(--accent);font-weight:900;cursor:pointer}
+    .modal-backdrop{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:18px;background:rgba(31,42,55,.38);backdrop-filter:blur(5px)}
+    .modal-backdrop[hidden]{display:none}
+    .modal{width:min(100%,520px);background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 24px 70px rgba(31,42,55,.22)}
+    .modal h2{margin:0 0 6px;font-size:22px}.modal p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+    .modal-note{margin-top:16px!important}.modal-subtext{margin-top:10px!important}
+    .report-options{display:grid;gap:10px;margin:18px 0}.report-option{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff;font-weight:700}.report-option input{width:auto;accent-color:var(--accent)}
+    .required-note{padding:12px;border-radius:13px;background:#fff8e8;color:#765713;font-size:13px;font-weight:700;line-height:1.45}
+    .report-view-options{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.report-view-options label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700}.report-view-options input{width:auto}
+    @media (max-width:900px){
+      .topgrid{grid-template-columns:1fr}
+      .hero{min-width:0;grid-template-columns:repeat(2,minmax(0,1fr))}
+      .summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .charts{grid-template-columns:1fr}
+    }
+    @media (max-width:760px){
+      .inputs,.summary,.hero,.calculation-grid{grid-template-columns:1fr}
+      .wrap{padding:16px 12px 28px}
+      .panel,.chart-card{padding:14px}
+      thead th,tbody td{padding:8px 8px}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div>
+        <div class="kicker">Mortgage amortization calculator</div>
+        <h1>See how extra payments change the payoff.</h1>
+        <p class="sub">Compare a baseline mortgage against editable extra-payment rules, then review the payoff date, saved interest, charts, and a month-by-month schedule.</p>
+        <button class="btn export-btn" id="exportReport">Export report</button>
+      </div>
+      <div class="hero" id="summary"></div>
+    </header>
+
+    <details class="card calculation-card" id="calculationSection" open>
+      <summary>How the payment is calculated</summary>
+      <div class="calculation-grid">
+        <div class="calculation-block">
+          <h3>General baseline method</h3>
+          <div class="formula">Monthly rate = annual rate / 12<br>Payment = P x r x (1 + r)^n / ((1 + r)^n - 1)<br>Interest = beginning balance x monthly rate<br>Principal = payment - interest<br>Ending balance = beginning balance - principal</div>
+          <p class="small">The monthly rate is derived from the annual rate entered above. The dollar amount of interest changes each payment as the remaining balance decreases. Extra payments are then applied directly to principal.</p>
+        </div>
+      </div>
+    </details>
+
+    <section class="topgrid">
+      <div class="left-stack">
+      <div class="card panel">
+        <h2>Loan inputs</h2>
+        <div class="inputs">
+          <div class="field full">
+            <label for="loanAmount">Loan amount</label>
+            <input id="loanAmount" type="number" min="0" step="1000" value="385000">
+          </div>
+          <div class="field">
+            <label for="rate">Interest rate %</label>
+            <input id="rate" type="number" min="0" step="0.01" value="5.99">
+          </div>
+          <div class="field">
+            <label for="termYears">Term years</label>
+            <input id="termYears" type="number" min="1" step="1" value="30">
+          </div>
+          <div class="field">
+            <label for="startDate">Start date</label>
+            <input id="startDate" type="date">
+          </div>
+          <div class="field">
+            <label for="paymentDay">Payment day</label>
+            <input id="paymentDay" type="number" min="1" max="28" step="1" value="1">
+          </div>
+        </div>
+          <p class="small input-note">Default behavior is to apply extras directly to principal, which shortens the loan unless the balance is already paid off.</p>
+          <div class="loan-breakdown" aria-label="Loan payment breakdown">
+            <div class="loan-breakdown-item"><span>Scheduled payment</span><strong id="breakdownPayment">-</strong></div>
+            <div class="loan-breakdown-item"><span>First-month interest</span><strong id="breakdownInterest">-</strong></div>
+            <div class="loan-breakdown-item"><span>First-month principal</span><strong id="breakdownPrincipal">-</strong></div>
+            <div class="loan-breakdown-item"><span>Total baseline interest</span><strong id="breakdownTotalInterest">-</strong></div>
+          </div>
+      </div>
+
+      <div class="card panel">
+        <h2>Extra payment rules</h2>
+        <div class="plan-toolbar">
+          <div class="plan-tabs" id="planTabs" role="tablist" aria-label="Payment plans"></div>
+          <div class="rule-actions">
+            <button class="btn ghost mini icon-btn" id="addPlan" aria-label="Add payment plan" title="Add payment plan"><span aria-hidden="true">+</span><span class="sr-only">Add payment plan</span></button>
+            <button class="btn ghost mini icon-btn" id="renamePlan" aria-label="Rename active plan" title="Rename active plan"><span aria-hidden="true">&#9998;</span><span class="sr-only">Rename active plan</span></button>
+            <button class="btn ghost mini icon-btn" id="duplicatePlan" aria-label="Duplicate active plan" title="Duplicate active plan"><span class="duplicate-icon" aria-hidden="true"></span><span class="sr-only">Duplicate active plan</span></button>
+            <button class="btn secondary mini icon-btn" id="deletePlan" aria-label="Delete active plan" title="Delete active plan"><span aria-hidden="true">&times;</span><span class="sr-only">Delete active plan</span></button>
+          </div>
+        </div>
+        <div class="row rule-actions-row">
+          <button class="btn" id="addRule">Add rule</button>
+          <button class="btn secondary" id="resetRules">Reset</button>
+        </div>
+        <div class="rules" id="rules"></div>
+        <div class="footer-note">Monthly and annual rules can coexist. Leave an end date empty to continue through the loan’s scheduled final payment.</div>
+      </div>
+      </div>
+      <div class="right-stack">
+    <section class="charts">
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div>
+            <h2>Remaining balance</h2>
+            <p>Baseline vs extra-payment scenario</p>
+          </div>
+        </div>
+        <svg id="balanceChart" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Remaining balance chart"></svg>
+        <div class="legend" id="balanceLegend"></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div>
+            <h2>Cumulative paid</h2>
+            <p>Principal and interest over time, extra-payment scenario</p>
+          </div>
+        </div>
+        <svg id="cumChart" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Cumulative principal and interest chart"></svg>
+        <div class="legend" id="cumLegend"></div>
+      </div>
+    </section>
+      </div>
+    </section>
+
+    <section class="card panel schedule-section">
+      <div class="schedule-heading"><h2>Amortization schedule</h2><div class="schedule-toggle" role="group" aria-label="Schedule year visibility"><button type="button" id="expandAllYears">Expand all</button><button type="button" id="collapseAllYears" class="active">Collapse all</button></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Date</th>
+              <th>Scheduled payment</th>
+              <th>Extra payment</th>
+              <th>Interest</th>
+              <th>Principal</th>
+              <th>Ending balance</th>
+              <th>Cumulative interest</th>
+              <th>Cumulative principal</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+      <p class="table-note">The table shows the extra-payment scenario only through its payoff date. Select a year to expand or collapse its monthly details.</p>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="exportModal" hidden>
+    <form class="modal" id="exportForm">
+      <h2>Customize your report</h2>
+      <p>Create a PDF report of your planned payment schedule. It will include the loan overview, baseline vs extra-payment comparison, extra-payment rules, and amortization schedule.</p>
+      <p class="modal-subtext">Customize the schedule detail and choose whether to include the charts.</p>
+      <div class="report-options">
+        <div class="report-option report-option--stacked"><div>Schedule detail</div><div class="report-view-options"><label><input type="radio" name="scheduleDetail" value="yearly" checked> Years only</label><label><input type="radio" name="scheduleDetail" value="monthly"> Monthly breakdowns</label></div></div>
+        <label class="report-option"><input type="checkbox" name="charts" checked> Include scenario charts</label>
+      </div>
+      <p class="modal-note">The report will open in print view so you can save it as a PDF.</p>
+      <div class="row"><button type="button" class="btn secondary" id="cancelExport">Cancel</button><button type="submit" class="btn">Create report</button></div>
+    </form>
+  </div>
+  <div class="modal-backdrop" id="paymentInfoModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="paymentInfoTitle">
+      <div class="row modal-heading"><h2 id="paymentInfoTitle">Payment calculation</h2><button type="button" class="btn secondary mini" id="closePaymentInfo" aria-label="Close payment calculation">&times;</button></div>
+      <div id="paymentCalculationDetails"></div>
+    </div>
+  </div>
+
+  <script>
+    const firstPlanId = crypto.randomUUID();
+    function createDefaultRules(){
+      return [{ id: crypto.randomUUID(), type: 'monthly', amount: 1000, start: '', end: '' }];
+    }
+
+    const state = {
+      plans: [{
+        id: firstPlanId,
+        name: 'Plan 1',
+        rules: createDefaultRules()
+      }],
+      activePlanId: firstPlanId,
+      scheduleExpanded: false
+    };
+
+    const els = {
+      loanAmount: document.getElementById('loanAmount'),
+      rate: document.getElementById('rate'),
+      termYears: document.getElementById('termYears'),
+      startDate: document.getElementById('startDate'),
+      paymentDay: document.getElementById('paymentDay'),
+      rules: document.getElementById('rules'),
+      planTabs: document.getElementById('planTabs'),
+      addPlan: document.getElementById('addPlan'),
+      renamePlan: document.getElementById('renamePlan'),
+      duplicatePlan: document.getElementById('duplicatePlan'),
+      deletePlan: document.getElementById('deletePlan'),
+      addRule: document.getElementById('addRule'),
+      resetRules: document.getElementById('resetRules'),
+      exportReport: document.getElementById('exportReport'),
+      summary: document.getElementById('summary'),
+      scheduleBody: document.getElementById('scheduleBody'),
+      balanceChart: document.getElementById('balanceChart'),
+      cumChart: document.getElementById('cumChart'),
+      balanceLegend: document.getElementById('balanceLegend'),
+      cumLegend: document.getElementById('cumLegend'),
+      breakdownPayment: document.getElementById('breakdownPayment'),
+      breakdownInterest: document.getElementById('breakdownInterest'),
+      breakdownPrincipal: document.getElementById('breakdownPrincipal'),
+      breakdownTotalInterest: document.getElementById('breakdownTotalInterest'),
+      paymentCalculationDetails: document.getElementById('paymentCalculationDetails'),
+      paymentInfoModal: document.getElementById('paymentInfoModal'),
+      paymentInfoTitle: document.getElementById('paymentInfoTitle'),
+      closePaymentInfo: document.getElementById('closePaymentInfo'),
+      expandAllYears: document.getElementById('expandAllYears'),
+      collapseAllYears: document.getElementById('collapseAllYears'),
+    };
+
+    const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    const money2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const dtf = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const planColors = ['#525ea7','#5facd3','#97dde9','#3f8fa5','#ffc349'];
+    const principalColors = ['#525ea7','#3f8fa5','#5facd3','#287f8c','#ffc349'];
+    const interestColors = ['#5facd3','#7081bd','#3f8fa5','#97dde9','#ffc349'];
+    function parseDate(v){
+      if(!v) return null;
+      const d = new Date(v + 'T00:00:00');
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    function formatDate(d){ return dtf.format(d); }
+    function escapeHtml(value){
+      return String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+    }
+    function toInputDate(d){
+      const z = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+      return z.toISOString().slice(0,10);
+    }
+    function addMonths(date, months){
+      const d = new Date(date.getTime());
+      const targetDay = d.getDate();
+      d.setMonth(d.getMonth() + months, 1);
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(targetDay, lastDay));
+      return d;
+    }
+    function clamp(n, min, max){ return Math.min(max, Math.max(min, n)); }
+
+    function loanInputs(){
+      return {
+        principal: Number(els.loanAmount.value) || 0,
+        annualRate: Number(els.rate.value) || 0,
+        years: Number(els.termYears.value) || 0,
+        startDate: parseDate(els.startDate.value) || new Date(),
+        paymentDay: clamp(Number(els.paymentDay.value) || 1, 1, 28)
+      };
+    }
+
+    function monthlyPayment(principal, annualRate, months){
+      if(months <= 0) return principal;
+      const r = annualRate / 12 / 100;
+      if(r === 0) return principal / months;
+      return principal * (r / (1 - Math.pow(1 + r, -months)));
+    }
+
+    function firstPaymentOnOrAfter(target){
+      const { startDate:start, paymentDay } = loanInputs();
+      let current = new Date(start.getFullYear(), start.getMonth(), paymentDay);
+      if(current < start) current = addMonths(current, 1);
+      for(let i=0;i<1200;i++){
+        if(current >= target) return current;
+        current = addMonths(current, 1);
+      }
+      return current;
+    }
+
+    function isSameMonth(a,b){
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+    }
+
+    function scheduledLoanEndDate(){
+      const { startDate:start, paymentDay, years } = loanInputs();
+      const months = Math.max(1, Math.round(years * 12));
+      let first = new Date(start.getFullYear(), start.getMonth(), paymentDay);
+      if(first < start) first = addMonths(first, 1);
+      return addMonths(first, months - 1);
+    }
+
+    function activePlan(){
+      return state.plans.find(plan => plan.id === state.activePlanId) || state.plans[0];
+    }
+
+    function groupRowsByYear(rows){
+      const groups = new Map();
+      rows.forEach(row => {
+        const year = row.date.getFullYear();
+        if(!groups.has(year)) groups.set(year, []);
+        groups.get(year).push(row);
+      });
+      return [...groups.entries()];
+    }
+
+    function beginningBalanceAt(rows, month){
+      return month <= 1 ? loanInputs().principal : rows[month - 2]?.endingBalance || 0;
+    }
+
+    function computeScenario({includeExtras, rules} = {}){
+      const { principal, annualRate, years, startDate, paymentDay } = loanInputs();
+      const months = Math.max(1, Math.round(years * 12));
+      const payment = monthlyPayment(principal, annualRate, months);
+      const r = annualRate / 12 / 100;
+      const rows = [];
+      let balance = principal;
+      let month = 1;
+      let paymentDate = new Date(startDate.getFullYear(), startDate.getMonth(), paymentDay);
+      if(paymentDate < startDate) paymentDate = addMonths(paymentDate, 1);
+      let cumulativeInterest = 0;
+      let cumulativePrincipal = 0;
+      const maxMonths = Math.max(months + 120, 1200);
+      while(balance > 0.009 && month <= maxMonths){
+        const interest = balance * r;
+        let scheduled = Math.min(payment, balance + interest);
+        let extra = 0;
+        if(includeExtras){
+          for(const rule of (rules || activePlan().rules)){
+            extra += extraForRule(rule, paymentDate);
+          }
+        }
+        const maxPay = balance + interest;
+        const totalPay = Math.min(maxPay, scheduled + extra);
+        const interestPaid = Math.min(interest, totalPay);
+        const principalPaid = totalPay - interestPaid;
+        const ending = Math.max(0, balance - principalPaid);
+        cumulativeInterest += interestPaid;
+        cumulativePrincipal += principalPaid;
+        rows.push({
+          month,
+          date: new Date(paymentDate.getTime()),
+          scheduledPayment: scheduled,
+          extraPayment: Math.max(0, totalPay - scheduled),
+          interest: interestPaid,
+          principal: principalPaid,
+          endingBalance: ending,
+          cumulativeInterest,
+          cumulativePrincipal
+        });
+        balance = ending;
+        paymentDate = addMonths(paymentDate, 1);
+        month += 1;
+        if(interest === 0 && scheduled + extra <= 0) break;
+      }
+      return {
+        payment,
+        rows,
+        payoffDate: rows.length ? rows[rows.length - 1].date : startDate,
+        totalInterest: cumulativeInterest
+      };
+    }
+
+    function extraForRule(rule, paymentDate){
+      const amount = Number(rule.amount) || 0;
+      if(amount <= 0) return 0;
+      const start = parseDate(rule.start);
+      const end = parseDate(rule.end);
+      const date = parseDate(rule.date);
+      const loanEnd = scheduledLoanEndDate();
+      if(rule.type === 'oneTime'){
+        if(!date) return 0;
+        const hit = paymentDate >= date && isSameMonth(paymentDate, firstPaymentOnOrAfter(date));
+        return hit ? amount : 0;
+      }
+      if(rule.type === 'monthly'){
+        if(start && paymentDate < start) return 0;
+        if(paymentDate > (end || loanEnd)) return 0;
+        return amount;
+      }
+      if(rule.type === 'annual'){
+        if(!start || paymentDate < start || paymentDate > (end || loanEnd)) return 0;
+        return paymentDate.getMonth() === start.getMonth() ? amount : 0;
+      }
+      return 0;
+    }
+
+    function drawChart(svg, series, opts){
+      const width = 1000, height = 320;
+      const pad = {l:64,r:24,t:18,b:42};
+      const plotW = width - pad.l - pad.r;
+      const plotH = height - pad.t - pad.b;
+      const maxX = Math.max(1, ...series.map(s => s.x[s.x.length - 1] || 1));
+      const maxY = Math.max(1, ...series.flatMap(s => s.y).filter(v => Number.isFinite(v)));
+      const minY = 0;
+      const lines = [];
+      for(let i=0;i<5;i++){
+        const y = pad.t + plotH * (i / 4);
+        const val = maxY - (maxY - minY) * (i / 4);
+        lines.push(`<line x1="${pad.l}" y1="${y}" x2="${width-pad.r}" y2="${y}" stroke="rgba(100,116,139,.16)"/><text x="${pad.l-10}" y="${y+4}" text-anchor="end" fill="#64748b" font-size="12">${opts.formatY(val)}</text>`);
+      }
+      for(let i=0;i<6;i++){
+        const x = pad.l + plotW * (i / 5);
+        const val = 1 + Math.round((maxX - 1) * (i / 5));
+        lines.push(`<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${height-pad.b}" stroke="rgba(100,116,139,.10)"/><text x="${x}" y="${height-18}" text-anchor="middle" fill="#64748b" font-size="12">${val}</text>`);
+      }
+      lines.push(`<text x="${pad.l + plotW / 2}" y="${height-3}" text-anchor="middle" fill="#475569" font-size="12" font-weight="700">${opts.xLabel || 'Months'}</text>`);
+      lines.push(`<text x="16" y="${pad.t + plotH / 2}" text-anchor="middle" fill="#475569" font-size="12" font-weight="700" transform="rotate(-90 16 ${pad.t + plotH / 2})">${opts.yLabel || 'Amount'}</text>`);
+      const paths = series.map(s => {
+        const points = s.x.map((x, i) => {
+          const px = pad.l + plotW * (x / maxX);
+          const py = pad.t + plotH * (1 - (s.y[i] - minY) / (maxY - minY || 1));
+          return `${px},${py}`;
+        }).join(' ');
+        const d = s.x.map((x,i) => {
+          const px = pad.l + plotW * (x / maxX);
+          const py = pad.t + plotH * (1 - (s.y[i] - minY) / (maxY - minY || 1));
+          return `${i===0?'M':'L'} ${px} ${py}`;
+        }).join(' ');
+        return `
+          <path d="${d}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="${points}" fill="none" stroke="${s.color}" opacity=".08" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        `;
+      }).join('');
+      svg.innerHTML = `
+        <rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="transparent"></rect>
+        ${lines.join('')}
+        ${paths}
+      `;
+    }
+
+    function renderLegend(element, items){
+      element.innerHTML = items.map(item => `<span><i class="swatch" style="background:${item.color}"></i>${escapeHtml(item.name)}</span>`).join('');
+    }
+
+    function render(){
+      const baseline = computeScenario({includeExtras:false});
+      const scenarios = state.plans.map(plan => ({ plan, result: computeScenario({includeExtras:true, rules:plan.rules}) }));
+      const activeScenario = scenarios.find(item => item.plan.id === state.activePlanId) || scenarios[0];
+      const extra = activeScenario.result;
+      const basePayoff = baseline.rows.length ? baseline.rows[baseline.rows.length - 1].date : parseDate(els.startDate.value);
+      const planLines = scenarios.map(({plan,result}) => {
+        const payoff = result.rows.length ? result.rows[result.rows.length - 1].date : parseDate(els.startDate.value);
+        const saved = Math.max(0, baseline.totalInterest - result.totalInterest);
+        const savedMonths = Math.max(0, baseline.rows.length - result.rows.length);
+        return { name:plan.name, payoff, interest:result.totalInterest, saved, savedMonths, savedYears:(savedMonths / 12).toFixed(1) };
+      });
+      const firstRow = baseline.rows[0];
+      els.breakdownPayment.textContent = money2.format(baseline.payment);
+      els.breakdownInterest.textContent = money2.format(firstRow?.interest || 0);
+      els.breakdownPrincipal.textContent = money2.format(firstRow?.principal || 0);
+      els.breakdownTotalInterest.textContent = money.format(baseline.totalInterest);
+
+      els.summary.innerHTML = [
+        `<div class="metric compare"><span>Payoff date</span><div class="compare-line"><span>Baseline</span><span>${formatDate(basePayoff)}</span></div>${planLines.map(line => `<div class="compare-line"><span>${escapeHtml(line.name)}</span><span>${formatDate(line.payoff)}</span></div>`).join('')}</div>`,
+        `<div class="metric compare"><span>Total interest paid</span><div class="compare-line"><span>Baseline</span><span>${money.format(baseline.totalInterest)}</span></div>${planLines.map(line => `<div class="compare-line"><span>${escapeHtml(line.name)}</span><span>${money.format(line.interest)}</span></div>`).join('')}</div>`,
+        `<div class="metric compare"><span>Saved vs baseline</span>${planLines.map(line => `<div class="compare-line"><span>${escapeHtml(line.name)}</span><span>${line.savedMonths} mo / ${line.savedYears} yr · ${money.format(line.saved)}</span></div>`).join('')}</div>`
+      ].join('');
+
+      drawChart(els.balanceChart, [
+        { x: baseline.rows.map((_, i) => i + 1), y: baseline.rows.map(r => r.endingBalance), color: '#525ea7' },
+        ...scenarios.map(({result}, i) => ({ x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.endingBalance), color:planColors[i % planColors.length] }))
+      ], { formatY: v => money.format(v), xLabel: 'Months from start', yLabel: 'Remaining balance' });
+
+      drawChart(els.cumChart, [
+        ...scenarios.flatMap(({plan,result}, i) => [
+          { x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.cumulativePrincipal), color:principalColors[i % principalColors.length] },
+          { x:result.rows.map((_, n) => n + 1), y:result.rows.map(r => r.cumulativeInterest), color:interestColors[i % interestColors.length] }
+        ])
+      ], { formatY: v => money.format(v), xLabel: 'Months from start', yLabel: 'Cumulative amount' });
+      renderLegend(els.balanceLegend, [{name:'Baseline',color:'#525ea7'}, ...scenarios.map(({plan}, i) => ({name:plan.name,color:planColors[i % planColors.length]}))]);
+      renderLegend(els.cumLegend, scenarios.flatMap(({plan}, i) => [{name:`${plan.name} principal`,color:principalColors[i % principalColors.length]},{name:`${plan.name} interest`,color:interestColors[i % interestColors.length]}]));
+
+      const yearGroups = groupRowsByYear(extra.rows);
+      els.scheduleBody.innerHTML = yearGroups.map(([year, rows]) => {
+        const yearInterest = rows.reduce((sum, row) => sum + row.interest, 0);
+        const yearScheduled = rows.reduce((sum, row) => sum + row.scheduledPayment, 0);
+        const yearExtra = rows.reduce((sum, row) => sum + row.extraPayment, 0);
+        const yearPrincipal = rows.reduce((sum, row) => sum + row.principal, 0);
+        const lastRow = rows[rows.length - 1];
+        const hidden = state.scheduleExpanded ? '' : ' is-hidden';
+        const arrow = state.scheduleExpanded ? '▾' : '▸';
+        return `<tr class="year-row"><td><button class="year-toggle" data-year="${year}" data-period="${rows.length}" aria-expanded="${state.scheduleExpanded}"><span>${arrow} ${rows.length} months</span><small>${year}</small></button></td><td>${formatDate(rows[0].date)} - ${formatDate(lastRow.date)}</td><td>${money2.format(yearScheduled)}</td><td>${money2.format(yearExtra)}</td><td>${money2.format(yearInterest)}</td><td>${money2.format(yearPrincipal)}</td><td>${money2.format(lastRow.endingBalance)}</td><td>${money2.format(lastRow.cumulativeInterest)}</td><td>${money2.format(lastRow.cumulativePrincipal)}</td><td><button type="button" class="info-button" data-year-detail="${year}" aria-label="Show calculation for ${year}" title="Show yearly calculation">i</button></td></tr>` + rows.map(r => `
+          <tr class="month-row${hidden}" data-year="${year}">
+            <td>Month ${r.month}</td>
+            <td>${formatDate(r.date)}</td>
+            <td>${money2.format(r.scheduledPayment)}</td>
+            <td>${money2.format(r.extraPayment)}</td>
+            <td>${money2.format(r.interest)}</td>
+            <td>${money2.format(r.principal)}</td>
+            <td>${money2.format(r.endingBalance)}</td>
+            <td>${money2.format(r.cumulativeInterest)}</td>
+            <td>${money2.format(r.cumulativePrincipal)}</td>
+            <td><button type="button" class="info-button" data-payment-month="${r.month}" aria-label="Show payment calculation for month ${r.month}" title="Show payment calculation">i</button></td>
+          </tr>
+        `).join('');
+      }).join('');
+      els.scheduleBody.querySelectorAll('.year-toggle').forEach(toggle => toggle.addEventListener('click', () => {
+        const year = toggle.dataset.year;
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!isExpanded));
+        toggle.querySelector('span').textContent = `${isExpanded ? '▸' : '▾'} ${toggle.dataset.period} months`;
+        els.scheduleBody.querySelectorAll(`.month-row[data-year="${year}"]`).forEach(row => row.classList.toggle('is-hidden', isExpanded));
+      }));
+      els.scheduleBody.querySelectorAll('[data-payment-month]').forEach(button => button.addEventListener('click', () => showPaymentCalculation(Number(button.dataset.paymentMonth))));
+      els.scheduleBody.querySelectorAll('[data-year-detail]').forEach(button => button.addEventListener('click', () => showYearCalculation(Number(button.dataset.yearDetail))));
+      els.expandAllYears.classList.toggle('active', state.scheduleExpanded);
+      els.collapseAllYears.classList.toggle('active', !state.scheduleExpanded);
+      if(!extra.rows.length){
+        els.scheduleBody.innerHTML = '<tr><td colspan="10" class="empty">No amortization rows to show.</td></tr>';
+      }
+    }
+
+    function showYearCalculation(year){
+      const baseline = computeScenario({includeExtras:false});
+      const extra = computeScenario({includeExtras:true, rules:activePlan().rules});
+      const baselineRows = baseline.rows.filter(row => row.date.getFullYear() === year);
+      const planRows = extra.rows.filter(row => row.date.getFullYear() === year);
+      const renderYear = (label, rows) => {
+        if(!rows.length) return `<div class="calculation-block"><h3>${label}</h3><p class="small">No payments in ${year}.</p></div>`;
+        const scheduled = rows.reduce((sum, row) => sum + row.scheduledPayment, 0);
+        const extraPaid = rows.reduce((sum, row) => sum + row.extraPayment, 0);
+        const interest = rows.reduce((sum, row) => sum + row.interest, 0);
+        const principal = rows.reduce((sum, row) => sum + row.principal, 0);
+        const sourceRows = label === 'Baseline payment' ? baseline.rows : extra.rows;
+        const beginningBalance = beginningBalanceAt(sourceRows, rows[0].month);
+        return `<div class="calculation-block"><h3>${label}</h3><div class="calculation-list"><div class="calculation-line"><span>Payments</span><span>${rows.length}</span></div><div class="calculation-line"><span>Beginning balance</span><span>${money2.format(beginningBalance)}</span></div><div class="calculation-line"><span>Scheduled payments</span><span>${money2.format(scheduled)}</span></div><div class="calculation-line"><span>Extra payments</span><span>${money2.format(extraPaid)}</span></div><div class="calculation-line"><span>Interest</span><span>${money2.format(interest)}</span></div><div class="calculation-line"><span>Principal</span><span>${money2.format(principal)}</span></div><div class="calculation-line"><span>Ending balance</span><span>${money2.format(rows[rows.length - 1].endingBalance)}</span></div></div></div>`;
+      };
+      els.paymentInfoTitle.textContent = `${year} payment calculation`;
+      els.paymentCalculationDetails.innerHTML = `<div class="calculation-grid">${renderYear('Baseline payment', baselineRows)}${renderYear(`${escapeHtml(activePlan().name)} payments`, planRows)}</div>`;
+      els.paymentInfoModal.hidden = false;
+    }
+
+    function showPaymentCalculation(month){
+      const baseline = computeScenario({includeExtras:false});
+      const extra = computeScenario({includeExtras:true, rules:activePlan().rules});
+      const selectedMonth = Math.max(1, Number(month) || 1);
+      const baselineRow = baseline.rows[selectedMonth - 1];
+      els.paymentInfoTitle.textContent = baselineRow ? `Payment ${selectedMonth} · ${formatDate(baselineRow.date)}` : `Payment ${selectedMonth}`;
+      renderPaymentCalculation(baseline, extra, selectedMonth);
+      els.paymentInfoModal.hidden = false;
+    }
+
+    function renderPaymentCalculation(baseline, extra, selectedMonth){
+      const baselineRow = baseline.rows[selectedMonth - 1];
+      const planRow = extra.rows[selectedMonth - 1];
+      const beginningBaseline = beginningBalanceAt(baseline.rows, selectedMonth);
+      const beginningPlan = beginningBalanceAt(extra.rows, selectedMonth);
+      const annualRate = Number(els.rate.value) || 0;
+      const monthlyRate = annualRate / 12;
+      const renderRow = (label, row, beginning) => row ? `<div class="calculation-block"><h3>${label}</h3><div class="calculation-list"><div class="calculation-line"><span>Beginning balance</span><span>${money2.format(beginning)}</span></div><div class="calculation-line"><span>Interest (${annualRate.toFixed(2)}% annual / ${monthlyRate.toFixed(4)}% monthly)</span><span>${money2.format(row.interest)}</span></div><div class="calculation-line"><span>Scheduled payment</span><span>${money2.format(row.scheduledPayment)}</span></div><div class="calculation-line"><span>Extra payment</span><span>${money2.format(row.extraPayment)}</span></div><div class="calculation-line"><span>Principal paid</span><span>${money2.format(row.principal)}</span></div><div class="calculation-line"><span>Ending balance</span><span>${money2.format(row.endingBalance)}</span></div></div></div>` : `<div class="calculation-block"><h3>${label}</h3><p class="small">This plan is already paid off by payment ${selectedMonth}.</p></div>`;
+      els.paymentCalculationDetails.innerHTML = `<div class="calculation-grid">${renderRow('Baseline payment', baselineRow, beginningBaseline)}${renderRow(`${escapeHtml(activePlan().name)} payment`, planRow, beginningPlan)}</div>`;
+    }
+
+    function renderRules(){
+      els.planTabs.innerHTML = state.plans.map(plan => `<button class="plan-tab${plan.id === state.activePlanId ? ' active' : ''}" data-plan-id="${plan.id}" role="tab" aria-selected="${plan.id === state.activePlanId}">${escapeHtml(plan.name)}</button>`).join('');
+      const planLimitReached = state.plans.length >= 5;
+      const onlyPlan = state.plans.length <= 1;
+      els.addPlan.disabled = planLimitReached;
+      els.addPlan.title = planLimitReached ? 'Delete a plan before adding another' : 'Add payment plan';
+      els.duplicatePlan.disabled = planLimitReached;
+      els.duplicatePlan.title = planLimitReached ? 'Delete a plan before duplicating another' : 'Duplicate active plan';
+      els.deletePlan.disabled = onlyPlan;
+      els.deletePlan.title = onlyPlan ? 'The last plan cannot be deleted' : 'Delete active plan';
+      els.planTabs.querySelectorAll('.plan-tab').forEach(tab => tab.addEventListener('click', () => {
+        state.activePlanId = tab.dataset.planId;
+        refreshRules();
+      }));
+      els.rules.innerHTML = activePlan().rules.map((rule, idx) => {
+        const typeLabel = {
+          oneTime: 'One-time extra',
+          monthly: 'Monthly extra',
+          annual: 'Annual extra'
+        }[rule.type] || 'Rule';
+        return `
+          <div class="rule" data-id="${rule.id}">
+            <div class="rule-head">
+              <div>
+                <div class="rule-title">${typeLabel} ${idx + 1}</div>
+                <div class="small">Edit or remove this rule. It will be combined with every other rule.</div>
+              </div>
+              <div class="rule-actions">
+                <button class="btn ghost mini icon-btn" data-action="duplicate" aria-label="Duplicate rule" title="Duplicate rule"><span class="duplicate-icon" aria-hidden="true"></span><span class="sr-only">Duplicate</span></button>
+                <button class="btn secondary mini icon-btn" data-action="remove" aria-label="Remove rule" title="Remove rule"><span aria-hidden="true">&times;</span><span class="sr-only">Remove</span></button>
+              </div>
+            </div>
+            <div class="inputs">
+              <div class="field">
+                <label>Type</label>
+                <select data-field="type">
+                  <option value="oneTime"${rule.type==='oneTime'?' selected':''}>One-time extra</option>
+                  <option value="monthly"${rule.type==='monthly'?' selected':''}>Monthly extra</option>
+                  <option value="annual"${rule.type==='annual'?' selected':''}>Annual extra</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Amount</label>
+                <input data-field="amount" type="number" min="0" step="50" value="${rule.amount ?? ''}">
+              </div>
+              ${rule.type === 'oneTime' ? `
+                <div class="field full">
+                  <label>Extra date</label>
+                  <input data-field="date" type="date" value="${rule.date || ''}">
+                </div>` : ''}
+              ${rule.type === 'monthly' || rule.type === 'annual' ? `
+                <div class="field">
+                  <label>Start date</label>
+                  <input data-field="start" type="date" value="${rule.start || ''}">
+                </div>
+                <div class="field">
+                  <label>End date <span class="small">(optional)</span></label>
+                  <input data-field="end" type="date" value="${rule.end || ''}">
+                </div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function refreshRules(){
+      renderRules();
+      wireRuleEvents();
+      render();
+    }
+
+    function addRule(type='monthly'){
+      activePlan().rules.push({
+        id: crypto.randomUUID(),
+        type,
+        amount: 1000,
+        date: '',
+        start: '',
+        end: '',
+        note: ''
+      });
+      refreshRules();
+    }
+
+    function addPlan(){
+      const suggestedName = `Plan ${state.plans.length + 1}`;
+      const name = window.prompt('Name this payment plan', suggestedName);
+      if(!name || !name.trim()) return;
+      const plan = { id:crypto.randomUUID(), name:name.trim(), rules:[] };
+      state.plans.push(plan);
+      state.activePlanId = plan.id;
+      refreshRules();
+    }
+
+    function duplicatePlan(){
+      const source = activePlan();
+      const copy = structuredClone(source);
+      copy.id = crypto.randomUUID();
+      copy.name = `${source.name} copy`;
+      copy.rules = copy.rules.map(rule => ({ ...rule, id: crypto.randomUUID() }));
+      state.plans.splice(state.plans.indexOf(source) + 1, 0, copy);
+      state.activePlanId = copy.id;
+      refreshRules();
+    }
+
+    function renamePlan(){
+      const plan = activePlan();
+      const name = window.prompt('Rename this payment plan', plan.name);
+      if(!name || !name.trim()) return;
+      plan.name = name.trim();
+      refreshRules();
+    }
+
+    function deletePlan(){
+      if(state.plans.length <= 1) return;
+      const plan = activePlan();
+      const index = state.plans.indexOf(plan);
+      state.plans = state.plans.filter(item => item.id !== plan.id);
+      state.activePlanId = state.plans[Math.min(index, state.plans.length - 1)].id;
+      refreshRules();
+    }
+
+    function wireRuleEvents(){
+      els.rules.querySelectorAll('.rule').forEach(ruleEl => {
+        const id = ruleEl.dataset.id;
+        const rule = activePlan().rules.find(r => r.id === id);
+        if(!rule) return;
+        ruleEl.querySelectorAll('input[data-field], textarea[data-field]').forEach(input => {
+          input.addEventListener('input', () => {
+            rule[input.dataset.field] = input.type === 'number' ? Number(input.value) : input.value;
+            render();
+          });
+        });
+        ruleEl.querySelectorAll('select[data-field]').forEach(select => {
+          select.addEventListener('change', () => {
+            const nextType = select.value;
+            const fresh = { id: rule.id, type: nextType, amount: rule.amount || 0, date:'', start:'', end:'', note: rule.note || '' };
+            Object.assign(rule, fresh);
+        refreshRules();
+          });
+        });
+        ruleEl.querySelector('[data-action="remove"]').addEventListener('click', () => {
+          activePlan().rules = activePlan().rules.filter(r => r.id !== id);
+          refreshRules();
+        });
+        ruleEl.querySelector('[data-action="duplicate"]').addEventListener('click', () => {
+          const copy = structuredClone(rule);
+          copy.id = crypto.randomUUID();
+          const rules = activePlan().rules;
+          rules.splice(rules.indexOf(rule) + 1, 0, copy);
+          refreshRules();
+        });
+      });
+    }
+
+    els.loanAmount.addEventListener('input', render);
+    els.rate.addEventListener('input', render);
+    els.termYears.addEventListener('input', render);
+    els.startDate.addEventListener('change', render);
+    els.paymentDay.addEventListener('input', render);
+    els.closePaymentInfo.addEventListener('click', () => { els.paymentInfoModal.hidden = true; });
+    els.paymentInfoModal.addEventListener('click', event => { if(event.target === els.paymentInfoModal) els.paymentInfoModal.hidden = true; });
+    function setAllYearsExpanded(expand){
+      state.scheduleExpanded = expand;
+      els.scheduleBody.querySelectorAll('.month-row').forEach(row => row.classList.toggle('is-hidden', !expand));
+      els.scheduleBody.querySelectorAll('.year-toggle').forEach(toggle => {
+        const year = toggle.dataset.year;
+        toggle.setAttribute('aria-expanded', String(expand));
+        toggle.querySelector('span').textContent = `${expand ? '▾' : '▸'} ${toggle.dataset.period} months`;
+      });
+      els.expandAllYears.classList.toggle('active', expand);
+      els.collapseAllYears.classList.toggle('active', !expand);
+    }
+    els.expandAllYears.addEventListener('click', () => setAllYearsExpanded(true));
+    els.collapseAllYears.addEventListener('click', () => setAllYearsExpanded(false));
+    els.addRule.addEventListener('click', () => addRule('monthly'));
+    els.addPlan.addEventListener('click', addPlan);
+    els.renamePlan.addEventListener('click', renamePlan);
+    els.duplicatePlan.addEventListener('click', duplicatePlan);
+    els.deletePlan.addEventListener('click', deletePlan);
+    els.exportReport.addEventListener('click', showExportOptions);
+    document.getElementById('cancelExport').addEventListener('click', hideExportOptions);
+    document.getElementById('exportModal').addEventListener('click', event => { if(event.target.id === 'exportModal') hideExportOptions(); });
+    document.getElementById('exportForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      const options = { overview:true, comparison:true, rules:true, schedule:true, charts:form.has('charts'), scheduleDetail:form.get('scheduleDetail') || 'yearly' };
+      hideExportOptions();
+      exportReport(options);
+    });
+    els.resetRules.addEventListener('click', () => {
+      activePlan().rules = createDefaultRules();
+      refreshRules();
+    });
+
+    function init(){
+      const today = new Date();
+      els.startDate.value = toInputDate(today);
+      refreshRules();
+      window.addEventListener('resize', render);
+    }
+
+    function showExportOptions(){
+      document.getElementById('exportModal').hidden = false;
+      document.getElementById('exportModal').querySelector('input').focus();
+    }
+
+    function hideExportOptions(){
+      document.getElementById('exportModal').hidden = true;
+    }
+
+    function exportReport(options){
+      const reportWindow = window.open('', '_blank');
+      const summary = document.querySelector('#summary').innerHTML;
+      const charts = [...document.querySelectorAll('.chart-card')].map(card => card.cloneNode(true));
+      const rules = document.querySelector('#rules').cloneNode(true);
+      const scheduleTable = document.querySelector('.table-wrap table').cloneNode(true);
+      rules.querySelectorAll('.rule-actions').forEach(node => node.remove());
+      scheduleTable.querySelectorAll('.info-button').forEach(node => node.remove());
+      rules.querySelectorAll('input, select, textarea').forEach(control => {
+        if(control.type === 'date' && !control.value){
+          control.closest('.field')?.remove();
+          return;
+        }
+        const value = control.tagName === 'SELECT' ? (control.selectedOptions[0]?.textContent || 'Not provided') : (control.value || 'Not provided');
+        const valueNode = document.createElement('span');
+        valueNode.className = 'report-value';
+        valueNode.textContent = value;
+        control.replaceWith(valueNode);
+      });
+      scheduleTable.querySelectorAll('.year-toggle').forEach(toggle => {
+        const label = document.createElement('span');
+        label.className = 'report-year-label';
+        label.textContent = toggle.querySelector('span').textContent.replace(/^[▾▸]\s*/, '');
+        toggle.replaceWith(label);
+      });
+      const inputValue = id => document.getElementById(id).value || 'Not provided';
+      const loanOverview = [
+        ['Loan amount', money2.format(Number(inputValue('loanAmount')) || 0)],
+        ['Interest rate', `${inputValue('rate')}%`],
+        ['Loan term', `${inputValue('termYears')} years`],
+        ['Start date', formatDate(parseDate(inputValue('startDate')) || new Date())],
+        ['Payment day', inputValue('paymentDay')]
+      ].map(([label, value]) => `<div class="report-field"><span>${label}</span><strong>${value}</strong></div>`).join('');
+      let scheduleMarkup = scheduleTable.outerHTML;
+      if(options.scheduleDetail === 'monthly'){
+        scheduleTable.querySelectorAll('.month-row').forEach(row => row.classList.remove('is-hidden'));
+        scheduleMarkup = scheduleTable.outerHTML;
+      } else {
+        const scenarioRows = computeScenario({includeExtras:true}).rows;
+        const annualRows = groupRowsByYear(scenarioRows);
+        scheduleMarkup = `<table><thead><tr><th>Year</th><th>Payments</th><th>Scheduled payments</th><th>Extra payments</th><th>Interest</th><th>Principal</th><th>Total paid</th><th>Ending balance</th></tr></thead><tbody>${annualRows.map(([year, rows]) => {
+          const scheduled = rows.reduce((sum, row) => sum + row.scheduledPayment, 0);
+          const extra = rows.reduce((sum, row) => sum + row.extraPayment, 0);
+          const interest = rows.reduce((sum, row) => sum + row.interest, 0);
+          const principal = rows.reduce((sum, row) => sum + row.principal, 0);
+          return `<tr><td>${year}</td><td>${rows.length}</td><td>${money2.format(scheduled)}</td><td>${money2.format(extra)}</td><td>${money2.format(interest)}</td><td>${money2.format(principal)}</td><td>${money2.format(scheduled + extra)}</td><td>${money2.format(rows[rows.length - 1].endingBalance)}</td></tr>`;
+        }).join('')}</tbody></table>`;
+      }
+      const reportBody = `<main class="pdf-report">
+        <header class="report-header"><div><p class="report-kicker">Mortgage planning report</p><h1>Amortization summary</h1><p>Baseline mortgage compared with the selected extra-payment plan.</p></div><div class="report-date">Prepared ${formatDate(new Date())}</div></header>
+        ${options.overview ? `<section class="report-section"><h2>Loan overview</h2><div class="report-fields">${loanOverview}</div></section>` : ''}
+        ${options.comparison ? `<section class="report-section"><h2>Baseline vs extra payments</h2><div class="report-summary">${summary}</div></section>` : ''}
+        ${options.rules ? `<section class="report-section report-rules"><h2>Extra-payment rules</h2>${rules.outerHTML}</section>` : ''}
+        ${options.charts ? `<section class="report-section report-charts"><h2>Scenario charts</h2><div class="report-chart-grid">${charts.map(chart => chart.outerHTML).join('')}</div></section>` : ''}
+        ${options.schedule ? `<section class="report-section report-schedule"><h2>Amortization schedule</h2><p class="report-muted">${options.scheduleDetail === 'monthly' ? 'Monthly detail' : 'Yearly summary'} through the extra-payment payoff date.</p><div class="report-table-wrap">${scheduleMarkup}</div></section>` : ''}
+      </main>`;
+      const reportStyles = `
+        :root{--ink:#27345d;--muted:#66738f;--line:#d3e5ec;--accent:#525ea7;--accent2:#ffc349;--accent3:#5facd3;--card:#fff}
+        *{box-sizing:border-box}html,body{margin:0;background:#f3fbfd;color:var(--ink);font-family:"Sora","Avenir Next",Avenir,"Segoe UI",sans-serif;font-size:12px;line-height:1.5}
+        .pdf-report{max-width:1120px;margin:0 auto;padding:38px;background:#fff;min-height:100vh}
+        .report-header{display:flex;justify-content:space-between;gap:28px;align-items:flex-start;border-bottom:4px solid var(--accent);padding-bottom:24px}
+        .report-kicker{margin:0 0 8px;color:var(--accent2);font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+        h1{margin:0;font-size:34px;line-height:1.08;letter-spacing:-.045em;font-weight:800}h2{margin:0 0 14px;font-size:19px;line-height:1.2;font-weight:700}.report-header p:not(.report-kicker){margin:9px 0 0;color:var(--muted)}.report-date{color:var(--muted);font-size:11px;white-space:nowrap}
+        .report-section{margin-top:26px}.report-fields{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.report-field,.report-summary .metric{border:1px solid var(--line);border-radius:12px;padding:12px;background:#eff8f7}.report-field span,.report-summary .metric>span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.report-field strong{display:block;margin-top:7px;font-size:15px}
+        .report-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.report-summary .metric{min-height:100px}.report-summary .compare-line{display:flex;justify-content:space-between;gap:12px;margin-top:9px;font-size:11px}.report-summary .compare-line span:last-child{font-weight:700;text-align:right}.report-summary .delta{color:var(--accent)}
+        .report-rules .rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.report-rules .rule{padding:12px;break-inside:avoid}.report-rules .rule-head{margin-bottom:8px}.report-rules .rule .inputs{gap:8px}.report-rules .report-value{display:block;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px}.report-rules .small,.report-rules .footer-note{display:none}
+        .report-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.report-charts .chart-card{padding:0;border:0;box-shadow:none}.report-charts .chart-head{margin-bottom:8px}.report-charts .chart-head h2{font-size:15px}.report-charts .chart-head p,.report-charts .legend{font-size:11px}.report-charts svg{height:auto;aspect-ratio:1000 / 320;border:1px solid var(--line)}
+        .report-muted{margin:-7px 0 12px;color:var(--muted);font-size:11px}.report-table-wrap{overflow:visible}.report-schedule table{width:100%;border-collapse:collapse;font-size:9px}.report-schedule th{background:#edf4fb;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);white-space:nowrap}.report-schedule td{padding:5px 4px;border-bottom:1px solid #e6f0f4;white-space:nowrap}.report-schedule .year-row td{padding:0;background:#eaf7fb}.report-year-label{display:block;padding:7px 4px;font-weight:700}.report-schedule .month-row.is-hidden{display:none}
+        @page{size:landscape;margin:.4in}@media print{body{background:#fff}.pdf-report{max-width:none;padding:0}.report-header,.report-section{break-inside:avoid}.report-schedule{break-before:page}.report-charts svg{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+        @media(max-width:760px){.pdf-report{padding:20px}.report-header{display:block}.report-date{margin-top:12px}.report-fields,.report-summary,.report-rules .rules,.report-chart-grid{grid-template-columns:1fr 1fr}}
+      `;
+      if(!reportWindow){
+        const blob = new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>Mortgage amortization report</title><style>${reportStyles}</style></head><body>${reportBody}</body></html>`], {type:'text/html'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'mortgage-amortization-report.html';
+        link.click();
+        URL.revokeObjectURL(link.href);
+        return;
+      }
+      reportWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Mortgage amortization report</title><style>${reportStyles}</style></head><body>${reportBody}</body></html>`);
+      reportWindow.document.close();
+      reportWindow.focus();
+      reportWindow.print();
+    }
+
+    init();
+  </script>
+</body>
+</html>
